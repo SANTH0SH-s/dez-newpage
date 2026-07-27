@@ -12,11 +12,11 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={twMerge(
-          "rounded-card border bg-white text-dezprox-text shadow-card transition-all duration-300",
+          "rounded-card bg-white text-dezprox-text dezprox-card-shadow transition-all duration-300",
           selected 
-            ? "border-dezprox-accent bg-dezprox-accent/[0.02] ring-2 ring-dezprox-accent/20" 
-            : "border-gray-100",
-          hoverable && "hoverable-card cursor-pointer hover:border-gray-200 hover:-translate-y-1 hover:shadow-card-hover",
+            ? "border-transparent premium-glow-selected bg-emerald-500/[0.01]" 
+            : "border border-gray-100/80",
+          hoverable && "dezprox-card-shadow-hover cursor-pointer",
           className
         )}
         {...props}

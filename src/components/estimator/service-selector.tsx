@@ -1,10 +1,32 @@
 import React from "react";
 import { SERVICES_DATA, getIcon } from "@/data/servicesData";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Check, ArrowRight } from "lucide-react";
 import { twMerge } from "tailwind-merge";
+import { motion } from "framer-motion";
+
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.05
+    }
+  }
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 110,
+      damping: 14
+    }
+  }
+};
 
 interface ServiceSelectorProps {
   selectedServiceIds: string[];
@@ -49,62 +71,72 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
       </div>
 
       {/* Services Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <motion.div 
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {SERVICES_DATA.map((service) => {
           const IconComponent = getIcon(service.iconName);
           const isSelected = selectedServiceIds.includes(service.id);
 
           return (
-            <Card
+            <motion.div
               key={service.id}
-              hoverable
-              selected={isSelected}
-              onClick={() => handleToggle(service.id)}
-              className="relative overflow-hidden cursor-pointer"
+              variants={cardVariants}
+              className="h-full"
             >
-              {/* Highlight Bar for Selection */}
-              <div 
-                className={twMerge(
-                  "absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300",
-                  isSelected ? "bg-dezprox-accent" : "bg-transparent"
-                )}
-              />
-
-              <CardHeader className="flex flex-row items-start space-x-4 p-6 pb-2">
+              <Card
+                hoverable
+                selected={isSelected}
+                onClick={() => handleToggle(service.id)}
+                className="relative overflow-hidden cursor-pointer h-full"
+              >
+                {/* Highlight Bar for Selection */}
                 <div 
                   className={twMerge(
-                    "p-3 rounded-xl transition-all duration-300",
-                    isSelected 
-                      ? "bg-dezprox-accent/15 text-dezprox-primary" 
-                      : "bg-gray-50 text-gray-500 group-hover:bg-gray-100"
+                    "absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300",
+                    isSelected ? "bg-dezprox-accent" : "bg-transparent"
                   )}
-                >
-                  <IconComponent className="w-6 h-6" />
-                </div>
-                
-                <div className="flex-1 min-w-0 pr-6">
-                  <CardTitle className="text-lg font-bold font-sans text-dezprox-primary truncate">
-                    {service.name}
-                  </CardTitle>
-                  <span className="text-xs font-sans text-dezprox-text/50 font-bold block mt-0.5">
-                    Starts at ₹{service.basePrice.toLocaleString()}
-                  </span>
-                </div>
+                />
 
-                {isSelected && (
-                  <div className="absolute top-4 right-4 bg-dezprox-accent text-dezprox-primary p-1 rounded-full">
-                    <Check className="w-3.5 h-3.5 stroke-[3px]" />
+                <CardHeader className="flex flex-row items-start space-x-4 p-6 pb-2">
+                  <div 
+                    className={twMerge(
+                      "p-3 rounded-xl transition-all duration-300",
+                      isSelected 
+                        ? "bg-dezprox-accent/15 text-dezprox-primary" 
+                        : "bg-gray-50 text-gray-500 group-hover:bg-gray-100"
+                    )}
+                  >
+                    <IconComponent className="w-6 h-6" />
                   </div>
-                )}
-              </CardHeader>
+                  
+                  <div className="flex-1 min-w-0 pr-6">
+                    <CardTitle className="text-lg font-bold font-sans text-dezprox-primary truncate">
+                      {service.name}
+                    </CardTitle>
+                    <span className="text-xs font-sans text-dezprox-text/50 font-bold block mt-0.5">
+                      Starts at ₹{service.basePrice.toLocaleString()}
+                    </span>
+                  </div>
 
-              <CardContent className="p-6 pt-2 font-sans text-sm text-dezprox-text/60 leading-relaxed">
-                {service.description}
-              </CardContent>
-            </Card>
+                  {isSelected && (
+                    <div className="absolute top-4 right-4 bg-dezprox-accent text-dezprox-primary p-1 rounded-full">
+                      <Check className="w-3.5 h-3.5 stroke-[3px]" />
+                    </div>
+                  )}
+                </CardHeader>
+
+                <CardContent className="p-6 pt-2 font-sans text-sm text-dezprox-text/60 leading-relaxed">
+                  {service.description}
+                </CardContent>
+              </Card>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
 
       {/* Form Action Footer */}
       <div className="mt-12 flex justify-center md:justify-end border-t border-gray-100 pt-8">

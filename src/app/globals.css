@@ -71,10 +71,43 @@ body {
 
 /* Smooth Transitions & Card Shadows */
 .dezprox-card-shadow {
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 
+    0 0 0 1px rgba(228, 231, 235, 0.8),
+    0 2px 6px -1px rgba(0, 0, 0, 0.015),
+    0 8px 16px -4px rgba(0, 0, 0, 0.025);
+}
+
+.dezprox-card-shadow-hover {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow, border-color;
 }
 
 .dezprox-card-shadow-hover:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  transform: translateY(-4px) translateZ(0);
+  border-color: rgba(34, 197, 94, 0.22);
+  box-shadow: 
+    0 0 0 1px rgba(34, 197, 94, 0.15),
+    0 20px 28px -12px rgba(0, 0, 0, 0.04),
+    0 4px 12px -2px rgba(34, 197, 94, 0.04);
+}
+
+/* Premium Card Highlight Glow */
+.premium-glow-selected {
+  box-shadow: 
+    0 0 0 2px rgb(34, 197, 94),
+    0 8px 24px -6px rgba(34, 197, 94, 0.18);
+}
+
+/* Stepper Active Glowing Pulse */
+@keyframes active-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5), 0 10px 15px -3px rgba(0, 0, 0, 0.04);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(34, 197, 94, 0), 0 10px 15px -3px rgba(0, 0, 0, 0.04);
+  }
+}
+.stepper-active-glow {
+  animation: active-pulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 

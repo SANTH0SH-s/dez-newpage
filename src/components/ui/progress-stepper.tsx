@@ -42,7 +42,7 @@ export const ProgressStepper = ({ steps, currentStep, onStepClick }: ProgressSte
                   isCompleted 
                     ? "bg-dezprox-primary border-dezprox-primary text-white" 
                     : isActive 
-                      ? "bg-white border-dezprox-accent text-dezprox-primary shadow-lg scale-110" 
+                      ? "bg-white border-dezprox-accent text-dezprox-primary shadow-lg scale-110 stepper-active-glow" 
                       : "bg-white border-gray-200 text-gray-400"
                 )}
               >
