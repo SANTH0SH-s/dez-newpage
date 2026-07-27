@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Hero } from "@/components/estimator/hero";
 import { ServiceSelector } from "@/components/estimator/service-selector";
 import { DynamicForm } from "@/components/estimator/dynamic-form";
@@ -21,6 +21,8 @@ const FLOW_STEPS = [
 ];
 
 export default function Home() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
   // Stepper state:
   // 0: Hero page (prior to stepper visual)
   // 1: Service Selection (maps to Stepper index 0)
@@ -36,6 +38,120 @@ export default function Home() {
   
   // Submission contact details
   const [contactData, setContactData] = useState<ContactData | null>(null);
+
+  // Background Canvas particle animation (re-runs/resizes on step transitions)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animationFrameId: number;
+    let width = (canvas.width = canvas.offsetWidth);
+    let height = (canvas.height = canvas.offsetHeight);
+
+    const particles: Array<{
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      radius: number;
+    }> = [];
+
+    const particleCount = 60;
+
+    // Create particles
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.45,
+        vy: (Math.random() - 0.5) * 0.45,
+        radius: Math.random() * 2 + 1,
+      });
+    }
+
+    // Mouse movement interaction coordinates
+    let mouse = { x: -1000, y: -1000 };
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+    };
+
+    const handleMouseLeave = () => {
+      mouse.x = -1000;
+      mouse.y = -1000;
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("mouseleave", handleMouseLeave);
+
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      // Render and connect dots
+      particles.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // Boundary checks
+        if (p.x < 0 || p.x > width) p.vx *= -1;
+        if (p.y < 0 || p.y > height) p.vy *= -1;
+
+        // Draw particle dot
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(63, 167, 64, 0.25)"; // Dezprox accent green shade
+        ctx.fill();
+
+        // Connect nearby particles
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+          if (dist < 110) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `rgba(63, 167, 64, ${0.12 * (1 - dist / 110)})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+
+        // Connect with mouse cursor
+        if (mouse.x > -500) {
+          const distToMouse = Math.hypot(p.x - mouse.x, p.y - mouse.y);
+          if (distToMouse < 160) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(mouse.x, mouse.y);
+            ctx.strokeStyle = `rgba(23, 26, 53, ${0.08 * (1 - distToMouse / 160)})`; // Primary color shade
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+        }
+      });
+
+      animationFrameId = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    const handleResize = () => {
+      if (!canvas) return;
+      width = canvas.width = canvas.offsetWidth;
+      height = canvas.height = canvas.offsetHeight;
+    };
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [currentStep]);
 
   // Update question answers
   const handleAnswerChange = (serviceId: string, questionId: string, value: any) => {
@@ -75,9 +191,15 @@ export default function Home() {
   const stepperIndex = currentStep > 0 ? currentStep - 1 : -1;
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-white relative overflow-hidden">
+      {/* Interactive canvas animation */}
+      <canvas 
+        ref={canvasRef} 
+        className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-75"
+      />
+
       {/* Premium Header */}
-      <header className="border-b border-gray-100 py-5 bg-white/80 backdrop-blur-md sticky top-0 z-50 px-4 print:hidden">
+      <header className="border-b border-gray-100 py-5 bg-white/80 backdrop-blur-md sticky top-0 z-50 px-4 print:hidden relative">
         <div className="max-w-[1280px] mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
             {/* SVG Logo representing Dezprox */}
@@ -105,7 +227,7 @@ export default function Home() {
       </header>
 
       {/* Main Flow Orchestrator */}
-      <main className="flex-1 w-full flex flex-col items-center">
+      <main className="flex-1 w-full flex flex-col items-center relative z-10">
         {/* Stepper container (Shown when not on Hero or Success Page) */}
         {currentStep > 0 && currentStep < 5 && (
           <div className="w-full max-w-[1280px] mx-auto pt-10 pb-6 print:hidden">

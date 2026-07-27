@@ -208,7 +208,7 @@ export const ContactForm = ({
                   Estimate Range
                 </span>
                 <span className="text-2xl font-extrabold block mt-2">
-                  ${result.estimatedMin.toLocaleString()} - ${result.estimatedMax.toLocaleString()}
+                  ₹{result.estimatedMin.toLocaleString()} - ₹{result.estimatedMax.toLocaleString()}
                 </span>
               </div>
 
@@ -221,7 +221,7 @@ export const ContactForm = ({
                     <li key={srv.serviceId} className="flex justify-between items-center text-sm font-sans text-dezprox-text/75">
                       <span className="truncate pr-4 font-semibold">{srv.serviceName}</span>
                       <span className="font-bold text-dezprox-primary text-xs shrink-0">
-                        ${Math.round(srv.totalCost).toLocaleString()}
+                        ₹{Math.round(srv.totalCost).toLocaleString()}
                       </span>
                     </li>
                   ))}

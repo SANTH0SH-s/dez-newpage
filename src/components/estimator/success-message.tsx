@@ -106,7 +106,7 @@ export const SuccessMessage = ({
                 Estimated pricing range
               </span>
               <span className="text-2xl md:text-3xl font-extrabold mt-1 text-white block">
-                ${result.estimatedMin.toLocaleString()} - ${result.estimatedMax.toLocaleString()}
+                ₹{result.estimatedMin.toLocaleString()} - ₹{result.estimatedMax.toLocaleString()}
               </span>
               <span className="text-[10px] text-white/60 mt-1 block">
                 *Subject to requirement refinements
@@ -136,7 +136,7 @@ export const SuccessMessage = ({
                   </div>
                   
                   <span className="font-bold text-dezprox-primary text-xs shrink-0 self-start mt-0.5 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded">
-                    Subtotal: ${Math.round(srv.totalCost).toLocaleString()}
+                    Subtotal: ₹{Math.round(srv.totalCost).toLocaleString()}
                   </span>
                 </div>
               ))}

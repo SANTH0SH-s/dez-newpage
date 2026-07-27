@@ -45,7 +45,7 @@ export const calculateProjectCosts = (
         id: `${serviceId}-base`,
         name: `${service.name} (Base Service)`,
         type: "base",
-        costLabel: `$${service.basePrice.toLocaleString()}`,
+        costLabel: `₹${service.basePrice.toLocaleString()}`,
         amount: service.basePrice
       }
     ];
@@ -73,7 +73,7 @@ export const calculateProjectCosts = (
                 id: `${serviceId}-${question.id}-${option.value}`,
                 name: `${question.text}: ${option.label}`,
                 type: "addon",
-                costLabel: `+$${option.priceModifier.toLocaleString()}`,
+                costLabel: `+₹${option.priceModifier.toLocaleString()}`,
                 amount: option.priceModifier
               });
             }

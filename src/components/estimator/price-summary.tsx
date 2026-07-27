@@ -40,11 +40,11 @@ export const PriceSummary = ({
           </span>
           <div className="mt-2 flex items-baseline">
             <span className="text-3xl font-bold font-sans">
-              ${result.estimatedMin.toLocaleString()}
+              ₹{result.estimatedMin.toLocaleString()}
             </span>
             <span className="mx-1 text-white/50 text-sm font-semibold font-sans">-</span>
             <span className="text-3xl font-bold font-sans">
-              ${result.estimatedMax.toLocaleString()}
+              ₹{result.estimatedMax.toLocaleString()}
             </span>
           </div>
           <p className="text-xs text-white/60 mt-2 font-sans">
@@ -61,7 +61,7 @@ export const PriceSummary = ({
               <li key={srv.serviceId} className="flex justify-between items-center text-sm text-dezprox-text/75 font-sans">
                 <span className="truncate pr-4 font-semibold">{srv.serviceName}</span>
                 <span className="font-bold text-dezprox-primary text-xs">
-                  ${Math.round(srv.totalCost).toLocaleString()}
+                  ₹{Math.round(srv.totalCost).toLocaleString()}
                 </span>
               </li>
             ))}
@@ -99,7 +99,7 @@ export const PriceSummary = ({
                   {srv.serviceName}
                 </h3>
                 <Badge variant="accent" className="font-sans text-xs font-bold text-dezprox-primary bg-dezprox-accent/20">
-                  Subtotal: ${Math.round(srv.totalCost).toLocaleString()}
+                  Subtotal: ₹{Math.round(srv.totalCost).toLocaleString()}
                 </Badge>
               </div>
 
@@ -111,7 +111,7 @@ export const PriceSummary = ({
                         <ChevronRight className="w-4 h-4 text-dezprox-accent shrink-0 mt-0.5" />
                         {item.name}
                       </span>
-                      <span className="font-semibold text-dezprox-primary font-mono bg-gray-50/50 px-2.5 py-0.5 rounded text-xs border border-gray-100">
+                      <span className="font-semibold text-dezprox-primary font-sans bg-gray-50/50 px-2.5 py-0.5 rounded text-xs border border-gray-100">
                         {item.costLabel}
                       </span>
                     </div>
@@ -140,11 +140,11 @@ export const PriceSummary = ({
                   </span>
                   <div className="mt-3 flex items-baseline justify-center">
                     <span className="text-2xl md:text-3xl font-extrabold font-sans">
-                      ${result.estimatedMin.toLocaleString()}
+                      ₹{result.estimatedMin.toLocaleString()}
                     </span>
                     <span className="mx-2 text-gray-400 text-base font-semibold">-</span>
                     <span className="text-2xl md:text-3xl font-extrabold font-sans">
-                      ${result.estimatedMax.toLocaleString()}
+                      ₹{result.estimatedMax.toLocaleString()}
                     </span>
                   </div>
                   <p className="text-[11px] text-gray-300 mt-3 leading-relaxed">
@@ -160,11 +160,11 @@ export const PriceSummary = ({
                   </div>
                   <div className="flex justify-between">
                     <span>Base Flat Fees</span>
-                    <span className="font-semibold text-dezprox-primary">${result.totalBaseCost.toLocaleString()}</span>
+                    <span className="font-semibold text-dezprox-primary">₹{result.totalBaseCost.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between border-t border-gray-200 pt-3 font-semibold text-dezprox-primary">
                     <span>Subtotal Cost</span>
-                    <span>${Math.round(result.totalCalculatedCost).toLocaleString()}</span>
+                    <span>₹{Math.round(result.totalCalculatedCost).toLocaleString()}</span>
                   </div>
                 </div>
 

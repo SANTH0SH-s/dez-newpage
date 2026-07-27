@@ -105,7 +105,7 @@ export const DynamicForm = ({
                   placeholder="Select option..."
                   options={question.options.map((opt) => ({
                     value: opt.value,
-                    label: `${opt.label} (${opt.modifierType === "flat" ? "+" : ""}${opt.priceModifier}${opt.modifierType === "flat" ? "$" : "x"})`
+                    label: `${opt.label} (${opt.modifierType === "flat" ? "+" : ""}${opt.priceModifier}${opt.modifierType === "flat" ? "₹" : "x"})`
                   }))}
                   value={selectedValue || ""}
                   onChange={(e) => onAnswerChange(service.id, question.id, e.target.value)}
@@ -158,7 +158,7 @@ export const DynamicForm = ({
                             {option.priceModifier !== 0 && (
                               <span>
                                 {option.modifierType === "flat" ? (
-                                  `+$${option.priceModifier.toLocaleString()}`
+                                  `+₹${option.priceModifier.toLocaleString()}`
                                 ) : (
                                   `+${Math.round((option.priceModifier - 1) * 100)}%`
                                 )}

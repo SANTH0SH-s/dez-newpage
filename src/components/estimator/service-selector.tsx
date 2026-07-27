@@ -87,7 +87,7 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
                     {service.name}
                   </CardTitle>
                   <span className="text-xs font-sans text-dezprox-text/50 font-bold block mt-0.5">
-                    Starts at ${service.basePrice.toLocaleString()}
+                    Starts at ₹{service.basePrice.toLocaleString()}
                   </span>
                 </div>
 
