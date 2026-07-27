@@ -1,65 +1,255 @@
-import Image from "next/image";
+"use client";
+
+import React, { useState } from "react";
+import { Hero } from "@/components/estimator/hero";
+import { ServiceSelector } from "@/components/estimator/service-selector";
+import { DynamicForm } from "@/components/estimator/dynamic-form";
+import { PriceSummary } from "@/components/estimator/price-summary";
+import { ContactForm, ContactData } from "@/components/estimator/contact-form";
+import { SuccessMessage } from "@/components/estimator/success-message";
+import { ProgressStepper } from "@/components/ui/progress-stepper";
+import { ShieldCheck, HelpCircle, Layers, ArrowRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+// Steps defined for the ProgressStepper
+const FLOW_STEPS = [
+  "Choose Services",
+  "Configure Options",
+  "Review Estimate",
+  "Contact Info",
+  "Complete"
+];
 
 export default function Home() {
+  // Stepper state:
+  // 0: Hero page (prior to stepper visual)
+  // 1: Service Selection (maps to Stepper index 0)
+  // 2: Dynamic Questionnaire (maps to Stepper index 1)
+  // 3: Standalone Price Summary (maps to Stepper index 2)
+  // 4: Contact Form (maps to Stepper index 3)
+  // 5: Success Message (maps to Stepper index 4)
+  const [currentStep, setCurrentStep] = useState(0);
+
+  // Selections & Configuration State
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+  const [answers, setAnswers] = useState<Record<string, Record<string, any>>>({});
+  
+  // Submission contact details
+  const [contactData, setContactData] = useState<ContactData | null>(null);
+
+  // Update question answers
+  const handleAnswerChange = (serviceId: string, questionId: string, value: any) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [serviceId]: {
+        ...(prev[serviceId] || {}),
+        [questionId]: value
+      }
+    }));
+  };
+
+  // Navigations
+  const handleStart = () => setCurrentStep(1);
+  const handleNextFromSelector = () => setCurrentStep(2);
+  const handleNextFromForm = () => setCurrentStep(3);
+  const handleNextFromSummary = () => setCurrentStep(4);
+  
+  const handleContactSubmit = (data: ContactData) => {
+    setContactData(data);
+    setCurrentStep(5);
+  };
+
+  const handleBackToSelector = () => setCurrentStep(1);
+  const handleBackToForm = () => setCurrentStep(2);
+  const handleBackToSummary = () => setCurrentStep(3);
+
+  const handleReset = () => {
+    setSelectedServiceIds([]);
+    setAnswers({});
+    setContactData(null);
+    setCurrentStep(0);
+  };
+
+  // Maps workflow step active index to ProgressStepper index
+  // Returns -1 if we are on Hero screen (step 0)
+  const stepperIndex = currentStep > 0 ? currentStep - 1 : -1;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="flex flex-col min-h-screen bg-white">
+      {/* Premium Header */}
+      <header className="border-b border-gray-100 py-5 bg-white/80 backdrop-blur-md sticky top-0 z-50 px-4 print:hidden">
+        <div className="max-w-[1280px] mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            {/* SVG Logo representing Dezprox */}
+            <div className="w-10 h-10 bg-dezprox-primary rounded-full flex items-center justify-center font-sans font-extrabold text-white text-base tracking-tighter">
+              Dpx
+            </div>
+            <span className="font-sans font-bold text-xl text-dezprox-primary tracking-tight">
+              DEZPROX
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-6 text-sm font-sans font-bold text-gray-500">
+            <span className="hidden md:inline-flex items-center gap-1.5 hover:text-dezprox-primary transition-colors cursor-pointer">
+              <ShieldCheck className="w-4 h-4 text-dezprox-accent" />
+              Secure Data Guarantee
+            </span>
+            <a 
+              href="mailto:support@dezprox.com"
+              className="text-dezprox-primary hover:underline flex items-center gap-1 font-semibold"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              Need Support?
+            </a>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+      </header>
+
+      {/* Main Flow Orchestrator */}
+      <main className="flex-1 w-full flex flex-col items-center">
+        {/* Stepper container (Shown when not on Hero or Success Page) */}
+        {currentStep > 0 && currentStep < 5 && (
+          <div className="w-full max-w-[1280px] mx-auto pt-10 pb-6 print:hidden">
+            <ProgressStepper 
+              steps={FLOW_STEPS} 
+              currentStep={stepperIndex} 
+              onStepClick={(idx) => setCurrentStep(idx + 1)}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
+        )}
+
+        {/* Dynamic Step Viewport with Slide Fades */}
+        <div className="w-full max-w-[1280px] mx-auto flex-1 flex flex-col justify-center py-6">
+          <AnimatePresence mode="wait">
+            {currentStep === 0 && (
+              <motion.div
+                key="hero"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="w-full"
+              >
+                <Hero onStart={handleStart} />
+              </motion.div>
+            )}
+
+            {currentStep === 1 && (
+              <motion.div
+                key="selector"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="w-full"
+              >
+                <ServiceSelector
+                  selectedServiceIds={selectedServiceIds}
+                  onChange={setSelectedServiceIds}
+                  onNext={handleNextFromSelector}
+                />
+              </motion.div>
+            )}
+
+            {currentStep === 2 && (
+              <motion.div
+                key="form"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-start px-4"
+              >
+                {/* Form Questionnaire (Left Column) */}
+                <div className="lg:col-span-2">
+                  <DynamicForm
+                    selectedServiceIds={selectedServiceIds}
+                    answers={answers}
+                    onAnswerChange={handleAnswerChange}
+                    onBack={handleBackToSelector}
+                    onNext={handleNextFromForm}
+                  />
+                </div>
+
+                {/* Live Sidebar Calculator Widget (Right Column) */}
+                <div className="lg:col-span-1 py-8 hidden lg:block">
+                  <PriceSummary
+                    selectedServiceIds={selectedServiceIds}
+                    answers={answers}
+                    sidebarMode={true}
+                  />
+                </div>
+              </motion.div>
+            )}
+
+            {currentStep === 3 && (
+              <motion.div
+                key="summary"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="w-full"
+              >
+                <PriceSummary
+                  selectedServiceIds={selectedServiceIds}
+                  answers={answers}
+                  onBack={handleBackToForm}
+                  onNext={handleNextFromSummary}
+                  sidebarMode={false}
+                />
+              </motion.div>
+            )}
+
+            {currentStep === 4 && (
+              <motion.div
+                key="contact"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="w-full"
+              >
+                <ContactForm
+                  selectedServiceIds={selectedServiceIds}
+                  answers={answers}
+                  onSubmit={handleContactSubmit}
+                  onBack={handleBackToSummary}
+                />
+              </motion.div>
+            )}
+
+            {currentStep === 5 && contactData && (
+              <motion.div
+                key="success"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className="w-full"
+              >
+                <SuccessMessage
+                  selectedServiceIds={selectedServiceIds}
+                  answers={answers}
+                  contactData={contactData}
+                  onReset={handleReset}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </main>
+
+      {/* Footer Info */}
+      <footer className="border-t border-gray-100 py-8 bg-gray-50/50 text-center text-xs text-gray-400 font-sans font-semibold mt-16 px-4 print:hidden">
+        <div className="max-w-[1280px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <p>© {new Date().getFullYear()} Dezprox. All rights reserved. Dynamic Service Pricing & Estimation Portal.</p>
+          <div className="flex space-x-6">
+            <span className="hover:text-dezprox-primary transition-colors cursor-pointer">Privacy Policy</span>
+            <span className="hover:text-dezprox-primary transition-colors cursor-pointer">Terms of Service</span>
+            <span className="hover:text-dezprox-primary transition-colors cursor-pointer">Platform Security</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

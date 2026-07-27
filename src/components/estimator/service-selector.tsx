@@ -1,0 +1,123 @@
+import React from "react";
+import { SERVICES_DATA, getIcon } from "@/data/servicesData";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Check, ArrowRight } from "lucide-react";
+import { twMerge } from "tailwind-merge";
+
+interface ServiceSelectorProps {
+  selectedServiceIds: string[];
+  onChange: (selectedIds: string[]) => void;
+  onNext: () => void;
+}
+
+export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: ServiceSelectorProps) => {
+  const handleToggle = (id: string) => {
+    if (selectedServiceIds.includes(id)) {
+      onChange(selectedServiceIds.filter((item) => item !== id));
+    } else {
+      onChange([...selectedServiceIds, id]);
+    }
+  };
+
+  const handleClearAll = () => {
+    onChange([]);
+  };
+
+  return (
+    <div className="w-full max-w-[1280px] mx-auto px-4 py-8">
+      {/* Header Info */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+        <div>
+          <h2 className="text-2xl font-bold font-sans text-dezprox-primary">
+            Select Your Project Services
+          </h2>
+          <p className="text-dezprox-text/60 font-sans text-sm mt-1">
+            Choose all the capabilities you require for this custom project.
+          </p>
+        </div>
+        
+        {selectedServiceIds.length > 0 && (
+          <button 
+            onClick={handleClearAll}
+            className="text-sm font-sans font-semibold text-dezprox-text/40 hover:text-dezprox-primary transition-colors cursor-pointer"
+          >
+            Clear selection ({selectedServiceIds.length})
+          </button>
+        )}
+      </div>
+
+      {/* Services Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {SERVICES_DATA.map((service) => {
+          const IconComponent = getIcon(service.iconName);
+          const isSelected = selectedServiceIds.includes(service.id);
+
+          return (
+            <Card
+              key={service.id}
+              hoverable
+              selected={isSelected}
+              onClick={() => handleToggle(service.id)}
+              className="relative overflow-hidden cursor-pointer"
+            >
+              {/* Highlight Bar for Selection */}
+              <div 
+                className={twMerge(
+                  "absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300",
+                  isSelected ? "bg-dezprox-accent" : "bg-transparent"
+                )}
+              />
+
+              <CardHeader className="flex flex-row items-start space-x-4 p-6 pb-2">
+                <div 
+                  className={twMerge(
+                    "p-3 rounded-xl transition-all duration-300",
+                    isSelected 
+                      ? "bg-dezprox-accent/15 text-dezprox-primary" 
+                      : "bg-gray-50 text-gray-500 group-hover:bg-gray-100"
+                  )}
+                >
+                  <IconComponent className="w-6 h-6" />
+                </div>
+                
+                <div className="flex-1 min-w-0 pr-6">
+                  <CardTitle className="text-lg font-bold font-sans text-dezprox-primary truncate">
+                    {service.name}
+                  </CardTitle>
+                  <span className="text-xs font-sans text-dezprox-text/50 font-bold block mt-0.5">
+                    Starts at ${service.basePrice.toLocaleString()}
+                  </span>
+                </div>
+
+                {isSelected && (
+                  <div className="absolute top-4 right-4 bg-dezprox-accent text-dezprox-primary p-1 rounded-full">
+                    <Check className="w-3.5 h-3.5 stroke-[3px]" />
+                  </div>
+                )}
+              </CardHeader>
+
+              <CardContent className="p-6 pt-2 font-sans text-sm text-dezprox-text/60 leading-relaxed">
+                {service.description}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Form Action Footer */}
+      <div className="mt-12 flex justify-center md:justify-end border-t border-gray-100 pt-8">
+        <Button
+          variant={selectedServiceIds.length > 0 ? "accent" : "outline"}
+          disabled={selectedServiceIds.length === 0}
+          onClick={onNext}
+          className="w-full md:w-auto flex items-center justify-center gap-2 group cursor-pointer"
+        >
+          Continue to Configuration
+          <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
+        </Button>
+      </div>
+    </div>
+  );
+};
