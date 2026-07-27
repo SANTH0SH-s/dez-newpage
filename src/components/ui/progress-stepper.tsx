@@ -13,14 +13,17 @@ export const ProgressStepper = ({ steps, currentStep, onStepClick }: ProgressSte
     <div className="w-full">
       {/* Desktop Stepper */}
       <div className="hidden md:flex items-center justify-between relative w-full px-4">
-        {/* Background Line */}
-        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gray-100 -translate-y-1/2 z-0" />
-        
-        {/* Active Line Progress */}
-        <div 
-          className="absolute top-1/2 left-0 h-0.5 bg-dezprox-primary -translate-y-1/2 transition-all duration-500 ease-in-out z-0" 
-          style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
-        />
+        {/* Progress Line Track Container */}
+        <div className="absolute top-1/2 left-[10%] right-[10%] h-0.5 -translate-y-1/2 z-0">
+          {/* Background Line */}
+          <div className="absolute inset-0 bg-gray-100" />
+          
+          {/* Active Line Progress */}
+          <div 
+            className="absolute top-0 bottom-0 left-0 bg-dezprox-primary transition-all duration-500 ease-in-out" 
+            style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
+          />
+        </div>
 
         {steps.map((step, idx) => {
           const isCompleted = idx < currentStep;
@@ -31,7 +34,7 @@ export const ProgressStepper = ({ steps, currentStep, onStepClick }: ProgressSte
               key={step}
               onClick={() => onStepClick && isCompleted && onStepClick(idx)}
               disabled={!onStepClick || !isCompleted}
-              className="relative flex flex-col items-center group z-10 focus:outline-none disabled:cursor-default"
+              className="relative flex flex-col items-center group z-10 focus:outline-none disabled:cursor-default flex-1"
             >
               <div 
                 className={twMerge(
@@ -51,7 +54,7 @@ export const ProgressStepper = ({ steps, currentStep, onStepClick }: ProgressSte
               </div>
               <span 
                 className={twMerge(
-                  "mt-3 text-xs font-semibold font-sans tracking-wide transition-all duration-300",
+                  "mt-3 text-xs font-semibold font-sans tracking-wide transition-all duration-300 text-center px-1 whitespace-nowrap",
                   isActive && "text-dezprox-primary font-bold",
                   isCompleted && "text-dezprox-primary/75 group-hover:text-dezprox-primary",
                   !isActive && !isCompleted && "text-gray-400"
