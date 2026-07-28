@@ -154,7 +154,7 @@ export default function ServiceManagement() {
                         {service.status}
                       </Badge>
                     </td>
-                    <td className="p-4 pr-6 text-right space-x-2">
+                    <td className="p-4 pr-6 text-right whitespace-nowrap space-x-2">
                       <button
                         onClick={() => handleToggleStatus(service.id)}
                         className={`p-1.5 rounded-lg border transition-all cursor-pointer ${

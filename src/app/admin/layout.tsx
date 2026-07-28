@@ -50,8 +50,11 @@ export default function AdminLayout({
   // Generate breadcrumb text
   const getBreadcrumbs = () => {
     const parts = pathname.split("/").filter(Boolean);
+    if (parts[0] === "admin") {
+      parts.shift();
+    }
     return parts.map((part, index) => {
-      const href = "/" + parts.slice(0, index + 1).join("/");
+      const href = "/admin/" + parts.slice(0, index + 1).join("/");
       const label = part.charAt(0).toUpperCase() + part.slice(1).replace("-", " ");
       return { href, label };
     });

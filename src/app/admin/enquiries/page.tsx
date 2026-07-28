@@ -159,7 +159,7 @@ export default function CustomerEnquiries() {
                         {enq.status === "contacted" ? "Contacted" : enq.status}
                       </Badge>
                     </td>
-                    <td className="p-4 pr-6 text-right space-x-2">
+                    <td className="p-4 pr-6 text-right whitespace-nowrap space-x-2">
                       <button
                         onClick={() => setViewingEnquiry(enq)}
                         className="p-1.5 border border-gray-200 text-gray-500 rounded-lg hover:text-dezprox-primary hover:bg-gray-50 transition-all cursor-pointer"

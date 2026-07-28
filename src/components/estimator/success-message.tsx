@@ -80,7 +80,7 @@ export const SuccessMessage = ({
           </span>
         </div>
 
-        <CardHeader className="bg-gray-50/70 border-b border-gray-100 p-6 flex flex-row justify-between items-start">
+        <CardHeader className="bg-gray-50/70 border-b border-gray-100 p-6 pt-10 flex flex-row justify-between items-start">
           <div>
             <span className="text-[10px] font-bold text-dezprox-text/40 uppercase tracking-widest block font-sans">
               Estimated Service Quote
