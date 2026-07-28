@@ -1,25 +1,34 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { calculateProjectCosts } from "@/utils/pricingCalculator";
 import { ContactData } from "./contact-form";
-import { Check, ClipboardCheck, ArrowRight, Printer, Sparkles } from "lucide-react";
+import { Check, ArrowRight, Printer, Sparkles } from "lucide-react";
+import { getGlobalSettings } from "@/utils/db";
 
 interface SuccessMessageProps {
   selectedServiceIds: string[];
   answers: Record<string, Record<string, any>>;
   contactData: ContactData;
   onReset: () => void;
+  projectModifiers?: { complexity?: string; urgency?: string; quality?: string };
 }
 
 export const SuccessMessage = ({
   selectedServiceIds,
   answers,
   contactData,
-  onReset
+  onReset,
+  projectModifiers = { complexity: "simple", urgency: "normal", quality: "standard" }
 }: SuccessMessageProps) => {
-  const result = calculateProjectCosts(selectedServiceIds, answers);
+  const [currency, setCurrency] = useState("₹");
+
+  useEffect(() => {
+    setCurrency(getGlobalSettings().currency);
+  }, []);
+
+  const result = calculateProjectCosts(selectedServiceIds, answers, projectModifiers);
   
   // Generate a random Reference ID
   const referenceId = React.useMemo(() => {
@@ -106,7 +115,7 @@ export const SuccessMessage = ({
                 Estimated pricing range
               </span>
               <span className="text-2xl md:text-3xl font-extrabold mt-1 text-white block">
-                ₹{result.estimatedMin.toLocaleString()} - ₹{result.estimatedMax.toLocaleString()}
+                {currency}{result.estimatedMin.toLocaleString()} - {currency}{result.estimatedMax.toLocaleString()}
               </span>
               <span className="text-[10px] text-white/60 mt-1 block">
                 *Subject to requirement refinements
@@ -136,7 +145,7 @@ export const SuccessMessage = ({
                   </div>
                   
                   <span className="font-bold text-dezprox-primary text-xs shrink-0 self-start mt-0.5 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded">
-                    Subtotal: ₹{Math.round(srv.totalCost).toLocaleString()}
+                    Subtotal: {currency}{Math.round(srv.totalCost).toLocaleString()}
                   </span>
                 </div>
               ))}

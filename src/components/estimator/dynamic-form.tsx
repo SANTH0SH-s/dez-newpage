@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { SERVICES_DATA, Service, Question, QuestionOption } from "@/data/servicesData";
+import React, { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Radio } from "@/components/ui/radio";
 import { Select } from "@/components/ui/select";
@@ -7,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Cog } from "lucide-react";
 import { twMerge } from "tailwind-merge";
+import { getServices, getGlobalSettings, Service } from "@/utils/db";
 
 interface DynamicFormProps {
   selectedServiceIds: string[];
@@ -23,12 +23,18 @@ export const DynamicForm = ({
   onBack,
   onNext
 }: DynamicFormProps) => {
-  // Index of the currently active service's questionnaire
+  const [services, setServices] = useState<Service[]>([]);
+  const [currency, setCurrency] = useState("₹");
   const [currentServiceIndex, setCurrentServiceIndex] = useState(0);
+
+  useEffect(() => {
+    setServices(getServices());
+    setCurrency(getGlobalSettings().currency);
+  }, []);
 
   // Find current service object
   const currentServiceId = selectedServiceIds[currentServiceIndex];
-  const service = SERVICES_DATA.find((s) => s.id === currentServiceId);
+  const service = services.find((s) => s.id === currentServiceId);
 
   if (!service) return null;
 
@@ -91,7 +97,7 @@ export const DynamicForm = ({
 
       {/* Questions Stack */}
       <div className="space-y-10">
-        {service.questions.map((question) => {
+        {service.questions && service.questions.map((question) => {
           const selectedValue = serviceAnswers[question.id];
 
           return (
@@ -103,16 +109,16 @@ export const DynamicForm = ({
               {question.type === "select" ? (
                 <Select
                   placeholder="Select option..."
-                  options={question.options.map((opt) => ({
+                  options={question.options.map((opt: any) => ({
                     value: opt.value,
-                    label: `${opt.label} (${opt.modifierType === "flat" ? "+" : ""}${opt.priceModifier}${opt.modifierType === "flat" ? "₹" : "x"})`
+                    label: `${opt.label} (${opt.modifierType === "flat" ? "+" : ""}${currency}${opt.priceModifier.toLocaleString()}${opt.modifierType === "flat" ? "" : "x"})`
                   }))}
                   value={selectedValue || ""}
                   onChange={(e) => onAnswerChange(service.id, question.id, e.target.value)}
                 />
               ) : (
                 <div className="grid grid-cols-1 gap-4">
-                  {question.options.map((option) => {
+                  {question.options.map((option: any) => {
                     const isCheckbox = question.type === "checkbox";
                     const isSelected = isCheckbox
                       ? Array.isArray(selectedValue) && selectedValue.includes(option.value)
@@ -158,7 +164,7 @@ export const DynamicForm = ({
                             {option.priceModifier !== 0 && (
                               <span>
                                 {option.modifierType === "flat" ? (
-                                  `+₹${option.priceModifier.toLocaleString()}`
+                                  `+${currency}${option.priceModifier.toLocaleString()}`
                                 ) : (
                                   `+${Math.round((option.priceModifier - 1) * 100)}%`
                                 )}
@@ -174,6 +180,106 @@ export const DynamicForm = ({
             </div>
           );
         })}
+
+        {/* Custom Pricing Components Section */}
+        {service.pricingComponents && service.pricingComponents.length > 0 && (
+          <div className="space-y-4 pt-6 border-t border-gray-100">
+            <h4 className="text-base font-bold text-dezprox-primary leading-tight flex items-center gap-2">
+              <span>Select Add-on Features & Components</span>
+              <span className="text-xs px-2.5 py-0.5 bg-dezprox-accent/15 text-dezprox-primary rounded-full font-bold">
+                Optional
+              </span>
+            </h4>
+            <div className="grid grid-cols-1 gap-4">
+              {service.pricingComponents.map((comp) => {
+                const selectedComponents = serviceAnswers["pricing-components"] || [];
+                const componentUnits = serviceAnswers["pricing-component-units"] || {};
+                const isSelected = selectedComponents.includes(comp.id);
+                const units = componentUnits[comp.id] || 1;
+
+                const handleToggleComponent = (e: React.MouseEvent) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  let newList = [...selectedComponents];
+                  if (isSelected) {
+                    newList = newList.filter((id) => id !== comp.id);
+                  } else {
+                    newList.push(comp.id);
+                  }
+                  onAnswerChange(service.id, "pricing-components", newList);
+                };
+
+                const handleUnitChange = (val: number) => {
+                  const newUnits = { ...componentUnits, [comp.id]: Math.max(1, val) };
+                  onAnswerChange(service.id, "pricing-component-units", newUnits);
+                };
+
+                return (
+                  <Card
+                    key={comp.id}
+                    hoverable
+                    selected={isSelected}
+                    onClick={handleToggleComponent}
+                    className="relative p-5 cursor-pointer select-none"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start flex-1 min-w-0">
+                        <div className="mt-0.5 mr-3" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => {
+                              let newList = [...selectedComponents];
+                              if (isSelected) {
+                                newList = newList.filter((id) => id !== comp.id);
+                              } else {
+                                newList.push(comp.id);
+                              }
+                              onAnswerChange(service.id, "pricing-components", newList);
+                            }}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0 pr-6">
+                          <span className="font-semibold text-sm text-dezprox-text leading-tight block">
+                            {comp.name}
+                          </span>
+                          {comp.description && (
+                            <span className="text-xs text-dezprox-text/50 mt-1 leading-relaxed block">
+                              {comp.description}
+                            </span>
+                          )}
+                          {isSelected && comp.type === "per-unit" && (
+                            <div 
+                              className="mt-3 flex items-center space-x-2"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span className="text-xs text-gray-500 font-semibold">
+                                Quantity ({service.unitType || "units"}):
+                              </span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={units}
+                                onChange={(e) => handleUnitChange(parseInt(e.target.value) || 1)}
+                                className="w-16 h-8 rounded-lg border border-gray-200 px-2 text-xs font-bold text-center focus:outline-none focus:border-dezprox-accent"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right text-xs font-bold text-dezprox-primary self-center whitespace-nowrap">
+                        {comp.type === "fixed" ? (
+                          `+${currency}${comp.fixedPrice.toLocaleString()}`
+                        ) : (
+                          `+${currency}${comp.perUnitPrice.toLocaleString()} / ${service.unitType || "unit"}`
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Form Controls */}
@@ -183,17 +289,17 @@ export const DynamicForm = ({
           onClick={handleBackStep}
           className="flex items-center gap-2 cursor-pointer"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
           Back
         </Button>
 
         <Button
-          variant="primary"
+          variant="accent"
           onClick={handleNextStep}
           className="flex items-center gap-2 cursor-pointer"
         >
-          {isLastService ? "Proceed to Summary" : "Next Service"}
-          <ArrowRight className="w-5 h-5" />
+          {isLastService ? "Review Price Estimate" : "Next Service Setup"}
+          <ArrowRight className="w-4 h-4" />
         </Button>
       </div>
     </div>

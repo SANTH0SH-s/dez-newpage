@@ -1,4 +1,4 @@
-import { SERVICES_DATA, Service } from "@/data/servicesData";
+import { getServices, getMultipliers, getGlobalSettings } from "@/utils/db";
 
 export interface CostBreakdownItem {
   id: string;
@@ -24,19 +24,27 @@ export interface TotalCalculationResult {
   totalCalculatedCost: number;
   estimatedMin: number;
   estimatedMax: number;
+  taxAmount: number;
+  discountAmount: number;
+  finalCost: number;
 }
 
 export const calculateProjectCosts = (
   selectedServiceIds: string[],
-  answers: Record<string, Record<string, any>>
+  answers: Record<string, Record<string, any>>,
+  projectModifiers?: { complexity?: string; urgency?: string; quality?: string }
 ): TotalCalculationResult => {
+  const services = getServices();
+  const multipliers = getMultipliers();
+  const settings = getGlobalSettings();
+
   const servicesBreakdown: ServiceCostBreakdown[] = [];
   let totalBaseCost = 0;
   let totalCalculatedCost = 0;
 
   selectedServiceIds.forEach((serviceId) => {
-    const service = SERVICES_DATA.find((s) => s.id === serviceId);
-    if (!service) return;
+    const service = services.find((s) => s.id === serviceId);
+    if (!service || service.status === "inactive") return;
 
     totalBaseCost += service.basePrice;
 
@@ -45,53 +53,87 @@ export const calculateProjectCosts = (
         id: `${serviceId}-base`,
         name: `${service.name} (Base Service)`,
         type: "base",
-        costLabel: `₹${service.basePrice.toLocaleString()}`,
+        costLabel: `${settings.currency}${service.basePrice.toLocaleString()}`,
         amount: service.basePrice
       }
     ];
 
     let flatAddons = 0;
-    let multipliersSum = 1.0; // We can multiply them or add them. In product billing, multiplying provides organic compounds. Let's multiply them!
     let multiplierProduct = 1.0;
 
     const serviceAnswers = answers[serviceId] || {};
 
-    service.questions.forEach((question) => {
-      const selectedValue = serviceAnswers[question.id];
-      if (selectedValue === undefined || selectedValue === null) return;
+    // 1. Dynamic questionnaire options
+    if (service.questions) {
+      service.questions.forEach((question) => {
+        const selectedValue = serviceAnswers[question.id];
+        if (selectedValue === undefined || selectedValue === null) return;
 
-      question.options.forEach((option) => {
-        const isSelected = Array.isArray(selectedValue)
-          ? selectedValue.includes(option.value)
-          : selectedValue === option.value;
+        question.options.forEach((option: any) => {
+          const isSelected = Array.isArray(selectedValue)
+            ? selectedValue.includes(option.value)
+            : selectedValue === option.value;
 
-        if (isSelected) {
-          if (option.modifierType === "flat") {
-            if (option.priceModifier !== 0) {
-              flatAddons += option.priceModifier;
-              details.push({
-                id: `${serviceId}-${question.id}-${option.value}`,
-                name: `${question.text}: ${option.label}`,
-                type: "addon",
-                costLabel: `+₹${option.priceModifier.toLocaleString()}`,
-                amount: option.priceModifier
-              });
+          if (isSelected) {
+            if (option.modifierType === "flat") {
+              if (option.priceModifier !== 0) {
+                flatAddons += option.priceModifier;
+                details.push({
+                  id: `${serviceId}-${question.id}-${option.value}`,
+                  name: `${question.text}: ${option.label}`,
+                  type: "addon",
+                  costLabel: `+${settings.currency}${option.priceModifier.toLocaleString()}`,
+                  amount: option.priceModifier
+                });
+              }
+            } else if (option.modifierType === "multiplier") {
+              if (option.priceModifier !== 1.0) {
+                multiplierProduct *= option.priceModifier;
+                details.push({
+                  id: `${serviceId}-${question.id}-${option.value}`,
+                  name: `${question.text}: ${option.label}`,
+                  type: "multiplier",
+                  costLabel: `${option.priceModifier > 1 ? "+" : ""}${Math.round((option.priceModifier - 1) * 100)}%`,
+                  amount: option.priceModifier
+                });
+              }
             }
-          } else if (option.modifierType === "multiplier") {
-            if (option.priceModifier !== 1.0) {
-              multiplierProduct *= option.priceModifier;
-              details.push({
-                id: `${serviceId}-${question.id}-${option.value}`,
-                name: `${question.text}: ${option.label}`,
-                type: "multiplier",
-                costLabel: `${option.priceModifier > 1 ? "+" : ""}${Math.round((option.priceModifier - 1) * 100)}%`,
-                amount: option.priceModifier
-              });
-            }
+          }
+        });
+      });
+    }
+
+    // 2. Custom Pricing Components (Module 3)
+    const selectedComponents = serviceAnswers["pricing-components"] || [];
+    const componentUnits = serviceAnswers["pricing-component-units"] || {};
+
+    if (service.pricingComponents) {
+      service.pricingComponents.forEach((comp) => {
+        if (selectedComponents.includes(comp.id)) {
+          if (comp.type === "fixed") {
+            flatAddons += comp.fixedPrice;
+            details.push({
+              id: comp.id,
+              name: `Component: ${comp.name}`,
+              type: "addon",
+              costLabel: `+${settings.currency}${comp.fixedPrice.toLocaleString()}`,
+              amount: comp.fixedPrice
+            });
+          } else if (comp.type === "per-unit") {
+            const units = componentUnits[comp.id] || 1;
+            const cost = comp.perUnitPrice * units;
+            flatAddons += cost;
+            details.push({
+              id: comp.id,
+              name: `Component: ${comp.name} (${units} ${service.unitType || "units"})`,
+              type: "addon",
+              costLabel: `+${settings.currency}${cost.toLocaleString()}`,
+              amount: cost
+            });
           }
         }
       });
-    });
+    }
 
     const totalCost = (service.basePrice + flatAddons) * multiplierProduct;
     totalCalculatedCost += totalCost;
@@ -107,15 +149,44 @@ export const calculateProjectCosts = (
     });
   });
 
-  // Calculate estimated range (e.g. -10% for min, +15% for max to account for requirements variance)
-  const estimatedMin = Math.round((totalCalculatedCost * 0.9) / 100) * 100;
-  const estimatedMax = Math.round((totalCalculatedCost * 1.15) / 100) * 100;
+  // Apply project-wide multipliers
+  const compOpt = multipliers.complexity.find((m) => m.id === projectModifiers?.complexity) || { value: 1.0 };
+  const urgOpt = multipliers.urgency.find((m) => m.id === projectModifiers?.urgency) || { value: 1.0 };
+  const qualOpt = multipliers.quality.find((m) => m.id === projectModifiers?.quality) || { value: 1.0 };
+
+  let finalCost = totalCalculatedCost * compOpt.value * urgOpt.value * qualOpt.value;
+
+  // Apply discounts
+  let discountAmount = 0;
+  if (settings.discountRate > 0) {
+    discountAmount = finalCost * (settings.discountRate / 100);
+    finalCost -= discountAmount;
+  }
+
+  // Apply tax
+  let taxAmount = 0;
+  if (settings.taxRate > 0) {
+    taxAmount = finalCost * (settings.taxRate / 100);
+    finalCost += taxAmount;
+  }
+
+  // Bound within settings constraints
+  if (finalCost < settings.minimumCost) finalCost = settings.minimumCost;
+  if (finalCost > settings.maximumCost) finalCost = settings.maximumCost;
+
+  // Range estimation (-10% to +15%)
+  const estimatedMin = Math.round((finalCost * 0.9) / 100) * 100;
+  const estimatedMax = Math.round((finalCost * 1.15) / 100) * 100;
 
   return {
     services: servicesBreakdown,
     totalBaseCost,
     totalCalculatedCost,
     estimatedMin,
-    estimatedMax
+    estimatedMax,
+    taxAmount,
+    discountAmount,
+    finalCost
   };
 };
+

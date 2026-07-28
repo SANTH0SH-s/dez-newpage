@@ -1,17 +1,21 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
 import { calculateProjectCosts } from "@/utils/pricingCalculator";
 import { ArrowLeft, Send } from "lucide-react";
+import { getGlobalSettings } from "@/utils/db";
 
 interface ContactFormProps {
   selectedServiceIds: string[];
   answers: Record<string, Record<string, any>>;
-  onSubmit: (contactData: ContactData) => void;
+  onSubmit: (contactData: ContactData, modifiers: { complexity: string; urgency: string; quality: string }) => void;
   onBack: () => void;
+  projectModifiers: { complexity: string; urgency: string; quality: string };
+  onModifierChange: (name: string, value: string) => void;
 }
 
 export interface ContactData {
@@ -26,9 +30,17 @@ export const ContactForm = ({
   selectedServiceIds,
   answers,
   onSubmit,
-  onBack
+  onBack,
+  projectModifiers,
+  onModifierChange
 }: ContactFormProps) => {
-  const result = calculateProjectCosts(selectedServiceIds, answers);
+  const [currency, setCurrency] = useState("₹");
+
+  useEffect(() => {
+    setCurrency(getGlobalSettings().currency);
+  }, []);
+
+  const result = calculateProjectCosts(selectedServiceIds, answers, projectModifiers);
   
   const [formData, setFormData] = useState<ContactData>({
     name: "",
@@ -68,7 +80,7 @@ export const ContactForm = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit(formData);
+      onSubmit(formData, projectModifiers);
     }
   };
 
@@ -91,76 +103,143 @@ export const ContactForm = ({
         <form onSubmit={handleSubmit} className="lg:col-span-2 space-y-6">
           <Card className="border-gray-100/70 p-6">
             <CardContent className="p-0 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Full Name */}
-                <div className="space-y-1">
-                  <label htmlFor="name" className="text-xs font-bold text-dezprox-primary uppercase tracking-wider block">
-                    Full Name *
-                  </label>
-                  <Input
-                    id="name"
-                    name="name"
-                    placeholder="John Doe"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className={errors.name ? "border-red-500 focus:ring-red-500/10 focus:border-red-500" : ""}
-                  />
-                  {errors.name && <span className="text-xs text-red-500">{errors.name}</span>}
-                </div>
+              
+              {/* Project Preferences (Modifiers) */}
+              <div>
+                <h3 className="text-xs font-bold text-dezprox-primary uppercase tracking-widest mb-4 border-b border-gray-100 pb-2">
+                  Project Preferences & Multipliers
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Complexity */}
+                  <div className="space-y-1">
+                    <label htmlFor="complexity" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
+                      Expected Complexity
+                    </label>
+                    <Select
+                      id="complexity"
+                      options={[
+                        { value: "simple", label: "Simple" },
+                        { value: "medium", label: "Medium" },
+                        { value: "complex", label: "Complex" },
+                      ]}
+                      value={projectModifiers.complexity}
+                      onChange={(e) => onModifierChange("complexity", e.target.value)}
+                    />
+                  </div>
 
-                {/* Email Address */}
-                <div className="space-y-1">
-                  <label htmlFor="email" className="text-xs font-bold text-dezprox-primary uppercase tracking-wider block">
-                    Email Address *
-                  </label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="johndoe@company.com"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className={errors.email ? "border-red-500 focus:ring-red-500/10 focus:border-red-500" : ""}
-                  />
-                  {errors.email && <span className="text-xs text-red-500">{errors.email}</span>}
+                  {/* Urgency */}
+                  <div className="space-y-1">
+                    <label htmlFor="urgency" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
+                      Delivery Urgency
+                    </label>
+                    <Select
+                      id="urgency"
+                      options={[
+                        { value: "normal", label: "Normal Timeline" },
+                        { value: "fast", label: "Fast (Expedited)" },
+                        { value: "urgent", label: "Urgent Priority" },
+                      ]}
+                      value={projectModifiers.urgency}
+                      onChange={(e) => onModifierChange("urgency", e.target.value)}
+                    />
+                  </div>
+
+                  {/* Quality */}
+                  <div className="space-y-1">
+                    <label htmlFor="quality" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
+                      Quality Standard
+                    </label>
+                    <Select
+                      id="quality"
+                      options={[
+                        { value: "basic", label: "Basic MVP" },
+                        { value: "standard", label: "Standard Production" },
+                        { value: "premium", label: "Premium Elite" },
+                      ]}
+                      value={projectModifiers.quality}
+                      onChange={(e) => onModifierChange("quality", e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Phone Number */}
-                <div className="space-y-1">
-                  <label htmlFor="phone" className="text-xs font-bold text-dezprox-primary uppercase tracking-wider block">
-                    Phone Number *
-                  </label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    placeholder="+1 (555) 123-4567"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className={errors.phone ? "border-red-500 focus:ring-red-500/10 focus:border-red-500" : ""}
-                  />
-                  {errors.phone && <span className="text-xs text-red-500">{errors.phone}</span>}
+              {/* Personal Details */}
+              <div className="pt-4">
+                <h3 className="text-xs font-bold text-dezprox-primary uppercase tracking-widest mb-4 border-b border-gray-100 pb-2">
+                  Your Contact Information
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Full Name */}
+                  <div className="space-y-1">
+                    <label htmlFor="name" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
+                      Full Name *
+                    </label>
+                    <Input
+                      id="name"
+                      name="name"
+                      placeholder="John Doe"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      className={errors.name ? "border-red-500 focus:ring-red-500/10 focus:border-red-500" : ""}
+                    />
+                    {errors.name && <span className="text-xs text-red-500">{errors.name}</span>}
+                  </div>
+
+                  {/* Email Address */}
+                  <div className="space-y-1">
+                    <label htmlFor="email" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
+                      Email Address *
+                    </label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="johndoe@company.com"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className={errors.email ? "border-red-500 focus:ring-red-500/10 focus:border-red-500" : ""}
+                    />
+                    {errors.email && <span className="text-xs text-red-500">{errors.email}</span>}
+                  </div>
                 </div>
 
-                {/* Company Name */}
-                <div className="space-y-1">
-                  <label htmlFor="company" className="text-xs font-bold text-dezprox-primary uppercase tracking-wider block">
-                    Company Name
-                  </label>
-                  <Input
-                    id="company"
-                    name="company"
-                    placeholder="Dezprox Corp"
-                    value={formData.company}
-                    onChange={handleInputChange}
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  {/* Phone Number */}
+                  <div className="space-y-1">
+                    <label htmlFor="phone" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
+                      Phone Number *
+                    </label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      placeholder="+1 (555) 123-4567"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className={errors.phone ? "border-red-500 focus:ring-red-500/10 focus:border-red-500" : ""}
+                    />
+                    {errors.phone && <span className="text-xs text-red-500">{errors.phone}</span>}
+                  </div>
+
+                  {/* Company Name */}
+                  <div className="space-y-1">
+                    <label htmlFor="company" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
+                      Company Name
+                    </label>
+                    <Input
+                      id="company"
+                      name="company"
+                      placeholder="Dezprox Corp"
+                      value={formData.company}
+                      onChange={handleInputChange}
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Notes */}
               <div className="space-y-1">
-                <label htmlFor="notes" className="text-xs font-bold text-dezprox-primary uppercase tracking-wider block">
+                <label htmlFor="notes" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
                   Project Notes & Details
                 </label>
                 <Textarea
@@ -204,11 +283,11 @@ export const ContactForm = ({
               </h3>
               
               <div className="bg-dezprox-primary text-white rounded-xl p-5 text-center">
-                <span className="text-xs font-bold text-dezprox-accent uppercase tracking-widest block">
+                <span className="text-xs font-bold text-dezprox-accent uppercase tracking-widest block font-sans">
                   Estimate Range
                 </span>
                 <span className="text-2xl font-extrabold block mt-2">
-                  ₹{result.estimatedMin.toLocaleString()} - ₹{result.estimatedMax.toLocaleString()}
+                  {currency}{result.estimatedMin.toLocaleString()} - {currency}{result.estimatedMax.toLocaleString()}
                 </span>
               </div>
 
@@ -221,7 +300,7 @@ export const ContactForm = ({
                     <li key={srv.serviceId} className="flex justify-between items-center text-sm font-sans text-dezprox-text/75">
                       <span className="truncate pr-4 font-semibold">{srv.serviceName}</span>
                       <span className="font-bold text-dezprox-primary text-xs shrink-0">
-                        ₹{Math.round(srv.totalCost).toLocaleString()}
+                        {currency}{Math.round(srv.totalCost).toLocaleString()}
                       </span>
                     </li>
                   ))}

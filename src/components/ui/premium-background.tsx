@@ -77,7 +77,7 @@ export const PremiumBackground = ({ currentStep }: PremiumBackgroundProps) => {
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(34, 197, 94, 0.2)";
+        ctx.fillStyle = "rgba(63, 167, 64, 0.2)";
         ctx.fill();
 
         for (let j = i + 1; j < particles.length; j++) {
@@ -87,7 +87,7 @@ export const PremiumBackground = ({ currentStep }: PremiumBackgroundProps) => {
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = `rgba(34, 197, 94, ${0.06 * (1 - dist / 140)})`;
+            ctx.strokeStyle = `rgba(63, 167, 64, ${0.06 * (1 - dist / 140)})`;
             ctx.lineWidth = 0.5;
             ctx.stroke();
           }
@@ -121,8 +121,8 @@ export const PremiumBackground = ({ currentStep }: PremiumBackgroundProps) => {
         className="absolute inset-0 opacity-[0.05] dark:opacity-[0.02]"
         style={{
           backgroundImage: `
-            linear-gradient(to right, #22c55e 1px, transparent 1px),
-            linear-gradient(to bottom, #22c55e 1px, transparent 1px)
+            linear-gradient(to right, #3FA740 1px, transparent 1px),
+            linear-gradient(to bottom, #3FA740 1px, transparent 1px)
           `,
           backgroundSize: "64px 64px",
           maskImage: "radial-gradient(circle at 50% 40%, black 20%, transparent 75%)",
@@ -131,16 +131,17 @@ export const PremiumBackground = ({ currentStep }: PremiumBackgroundProps) => {
       />
 
       {/* B. Floating Aurora Blurs (with will-change: transform to enable GPU/Hardware Acceleration) */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-400/6 blur-[120px] animate-float-slow will-change-transform" />
-      <div className="absolute bottom-[20%] right-[-10%] w-[45%] h-[45%] rounded-full bg-emerald-500/4 blur-[130px] animate-float-slower will-change-transform" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[rgba(63,167,64,0.06)] blur-[120px] animate-float-slow will-change-transform" />
+      <div className="absolute bottom-[20%] right-[-10%] w-[45%] h-[45%] rounded-full bg-[rgba(63,167,64,0.04)] blur-[130px] animate-float-slower will-change-transform" />
       <div className="absolute top-[40%] left-[25%] w-[35%] h-[35%] rounded-full bg-indigo-500/2 blur-[110px] animate-float-slow will-change-transform" />
 
       {/* C. Hardware-Accelerated Mouse Spotlight */}
       <div
-        className="absolute w-[600px] h-[600px] rounded-full bg-radial from-emerald-500/5 to-transparent blur-[60px] transition-opacity duration-300 ease-out will-change-transform"
+        className="absolute w-[600px] h-[600px] rounded-full blur-[60px] transition-opacity duration-300 ease-out will-change-transform"
         style={{
           opacity: isMouseActive ? 1 : 0,
           transform: `translate3d(${mousePos.x}px, ${mousePos.y}px, 0)`,
+          background: "radial-gradient(circle, rgba(63, 167, 64, 0.16) 0%, rgba(63, 167, 64, 0) 70%)"
         }}
       />
 

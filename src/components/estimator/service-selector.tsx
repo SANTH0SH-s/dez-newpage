@@ -1,10 +1,11 @@
-import React from "react";
-import { SERVICES_DATA, getIcon } from "@/data/servicesData";
+import React, { useEffect, useState } from "react";
+import { getIcon } from "@/data/servicesData";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, ArrowRight } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import { motion } from "framer-motion";
+import { getServices, getGlobalSettings, Service } from "@/utils/db";
 
 const containerVariants = {
   hidden: {},
@@ -35,6 +36,14 @@ interface ServiceSelectorProps {
 }
 
 export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: ServiceSelectorProps) => {
+  const [services, setServices] = useState<Service[]>([]);
+  const [currency, setCurrency] = useState("₹");
+
+  useEffect(() => {
+    setServices(getServices().filter((s) => s.status === "active"));
+    setCurrency(getGlobalSettings().currency);
+  }, []);
+
   const handleToggle = (id: string) => {
     if (selectedServiceIds.includes(id)) {
       onChange(selectedServiceIds.filter((item) => item !== id));
@@ -77,7 +86,7 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
         initial="hidden"
         animate="visible"
       >
-        {SERVICES_DATA.map((service) => {
+        {services.map((service) => {
           const IconComponent = getIcon(service.iconName);
           const isSelected = selectedServiceIds.includes(service.id);
 
@@ -96,8 +105,8 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
                 {/* Highlight Bar for Selection */}
                 <div 
                   className={twMerge(
-                    "absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300",
-                    isSelected ? "bg-dezprox-accent" : "bg-transparent"
+                     "absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300",
+                     isSelected ? "bg-dezprox-accent" : "bg-transparent"
                   )}
                 />
 
@@ -118,7 +127,7 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
                       {service.name}
                     </CardTitle>
                     <span className="text-xs font-sans text-dezprox-text/50 font-bold block mt-0.5">
-                      Starts at ₹{service.basePrice.toLocaleString()}
+                      Starts at {currency}{service.basePrice.toLocaleString()}
                     </span>
                   </div>
 

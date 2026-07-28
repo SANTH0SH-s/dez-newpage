@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { calculateProjectCosts, TotalCalculationResult } from "@/utils/pricingCalculator";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, CheckCircle2, DollarSign, ListCollapse, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronRight } from "lucide-react";
+import { getGlobalSettings, GlobalSettings } from "@/utils/db";
 
 interface PriceSummaryProps {
   selectedServiceIds: string[];
@@ -11,6 +12,7 @@ interface PriceSummaryProps {
   onBack?: () => void;
   onNext?: () => void;
   sidebarMode?: boolean;
+  projectModifiers?: { complexity?: string; urgency?: string; quality?: string };
 }
 
 export const PriceSummary = ({
@@ -18,9 +20,23 @@ export const PriceSummary = ({
   answers,
   onBack,
   onNext,
-  sidebarMode = false
+  sidebarMode = false,
+  projectModifiers = { complexity: "simple", urgency: "normal", quality: "standard" }
 }: PriceSummaryProps) => {
-  const result: TotalCalculationResult = calculateProjectCosts(selectedServiceIds, answers);
+  const [settings, setSettings] = useState<GlobalSettings | null>(null);
+
+  useEffect(() => {
+    setSettings(getGlobalSettings());
+  }, []);
+
+  const currentSettings = settings || { currency: "₹", taxRate: 0, discountRate: 0 };
+  const currency = currentSettings.currency;
+
+  const result: TotalCalculationResult = calculateProjectCosts(
+    selectedServiceIds,
+    answers,
+    projectModifiers
+  );
 
   if (selectedServiceIds.length === 0) {
     return (
@@ -38,13 +54,13 @@ export const PriceSummary = ({
           <span className="text-xs uppercase tracking-widest font-sans font-semibold text-dezprox-accent">
             Live Pricing Estimate
           </span>
-          <div className="mt-2 flex items-baseline">
-            <span className="text-3xl font-bold font-sans">
-              ₹{result.estimatedMin.toLocaleString()}
+          <div className="mt-2 flex items-baseline justify-start">
+            <span className="text-xl font-extrabold font-sans">
+              {currency}{result.estimatedMin.toLocaleString()}
             </span>
-            <span className="mx-1 text-white/50 text-sm font-semibold font-sans">-</span>
-            <span className="text-3xl font-bold font-sans">
-              ₹{result.estimatedMax.toLocaleString()}
+            <span className="mx-1 text-gray-400 text-sm font-semibold">-</span>
+            <span className="text-xl font-extrabold font-sans">
+              {currency}{result.estimatedMax.toLocaleString()}
             </span>
           </div>
           <p className="text-xs text-white/60 mt-2 font-sans">
@@ -61,11 +77,23 @@ export const PriceSummary = ({
               <li key={srv.serviceId} className="flex justify-between items-center text-sm text-dezprox-text/75 font-sans">
                 <span className="truncate pr-4 font-semibold">{srv.serviceName}</span>
                 <span className="font-bold text-dezprox-primary text-xs">
-                  ₹{Math.round(srv.totalCost).toLocaleString()}
+                  {currency}{Math.round(srv.totalCost).toLocaleString()}
                 </span>
               </li>
             ))}
           </ul>
+          {currentSettings.discountRate > 0 && (
+            <div className="flex justify-between text-xs text-emerald-600 font-semibold mb-2">
+              <span>Discount ({currentSettings.discountRate}%)</span>
+              <span>-{currency}{Math.round(result.discountAmount).toLocaleString()}</span>
+            </div>
+          )}
+          {currentSettings.taxRate > 0 && (
+            <div className="flex justify-between text-xs text-gray-500 mb-2">
+              <span>Tax ({currentSettings.taxRate}%)</span>
+              <span>+{currency}{Math.round(result.taxAmount).toLocaleString()}</span>
+            </div>
+          )}
           <div className="text-[11px] text-dezprox-text/45 border-t border-gray-100 pt-3">
             *Final quote will be tailored after scoping calls.
           </div>
@@ -99,7 +127,7 @@ export const PriceSummary = ({
                   {srv.serviceName}
                 </h3>
                 <Badge variant="accent" className="font-sans text-xs font-bold text-dezprox-primary bg-dezprox-accent/20">
-                  Subtotal: ₹{Math.round(srv.totalCost).toLocaleString()}
+                  Subtotal: {currency}{Math.round(srv.totalCost).toLocaleString()}
                 </Badge>
               </div>
 
@@ -140,11 +168,11 @@ export const PriceSummary = ({
                   </span>
                   <div className="mt-3 flex items-baseline justify-center">
                     <span className="text-2xl md:text-3xl font-extrabold font-sans">
-                      ₹{result.estimatedMin.toLocaleString()}
+                      {currency}{result.estimatedMin.toLocaleString()}
                     </span>
                     <span className="mx-2 text-gray-400 text-base font-semibold">-</span>
                     <span className="text-2xl md:text-3xl font-extrabold font-sans">
-                      ₹{result.estimatedMax.toLocaleString()}
+                      {currency}{result.estimatedMax.toLocaleString()}
                     </span>
                   </div>
                   <p className="text-[11px] text-gray-300 mt-3 leading-relaxed">
@@ -160,11 +188,41 @@ export const PriceSummary = ({
                   </div>
                   <div className="flex justify-between">
                     <span>Base Flat Fees</span>
-                    <span className="font-semibold text-dezprox-primary">₹{result.totalBaseCost.toLocaleString()}</span>
+                    <span className="font-semibold text-dezprox-primary">{currency}{result.totalBaseCost.toLocaleString()}</span>
                   </div>
+                  {projectModifiers.complexity && (
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Complexity modifier</span>
+                      <span className="font-semibold uppercase">{projectModifiers.complexity}</span>
+                    </div>
+                  )}
+                  {projectModifiers.urgency && (
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Urgency speed modifier</span>
+                      <span className="font-semibold uppercase">{projectModifiers.urgency}</span>
+                    </div>
+                  )}
+                  {projectModifiers.quality && (
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Quality standard modifier</span>
+                      <span className="font-semibold uppercase">{projectModifiers.quality}</span>
+                    </div>
+                  )}
+                  {currentSettings.discountRate > 0 && (
+                    <div className="flex justify-between text-xs text-emerald-600 font-semibold">
+                      <span>Discount ({currentSettings.discountRate}%)</span>
+                      <span>-{currency}{Math.round(result.discountAmount).toLocaleString()}</span>
+                    </div>
+                  )}
+                  {currentSettings.taxRate > 0 && (
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Tax ({currentSettings.taxRate}%)</span>
+                      <span>+{currency}{Math.round(result.taxAmount).toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t border-gray-200 pt-3 font-semibold text-dezprox-primary">
-                    <span>Subtotal Cost</span>
-                    <span>₹{Math.round(result.totalCalculatedCost).toLocaleString()}</span>
+                    <span>Total Cost</span>
+                    <span>{currency}{Math.round(result.finalCost).toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -178,15 +236,14 @@ export const PriceSummary = ({
                     Proceed to Contact Info
                     <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
                   </Button>
-
                   {onBack && (
                     <Button
                       variant="outline"
                       onClick={onBack}
-                      className="w-full flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full flex items-center justify-center cursor-pointer"
                     >
-                      <ArrowLeft className="w-5 h-5" />
-                      Back to Configure
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back to Configuration
                     </Button>
                   )}
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { DezproxLogo } from "@/components/ui/logo";
 import { PremiumBackground } from "@/components/ui/premium-background";
 import { Hero } from "@/components/estimator/hero";
@@ -10,10 +10,12 @@ import { PriceSummary } from "@/components/estimator/price-summary";
 import { ContactForm, ContactData } from "@/components/estimator/contact-form";
 import { SuccessMessage } from "@/components/estimator/success-message";
 import { ProgressStepper } from "@/components/ui/progress-stepper";
-import { ShieldCheck, HelpCircle, Layers, ArrowRight } from "lucide-react";
+import { ShieldCheck, ArrowRight, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
+import { addEnquiry, addEstimate, getGlobalSettings, getServices, initDb } from "@/utils/db";
+import { calculateProjectCosts } from "@/utils/pricingCalculator";
 
-// Steps defined for the ProgressStepper
 const FLOW_STEPS = [
   "Choose Services",
   "Configure Options",
@@ -23,23 +25,29 @@ const FLOW_STEPS = [
 ];
 
 export default function Home() {
-  // Stepper state:
-  // 0: Hero page (prior to stepper visual)
-  // 1: Service Selection (maps to Stepper index 0)
-  // 2: Dynamic Questionnaire (maps to Stepper index 1)
-  // 3: Standalone Price Summary (maps to Stepper index 2)
-  // 4: Contact Form (maps to Stepper index 3)
-  // 5: Success Message (maps to Stepper index 4)
   const [currentStep, setCurrentStep] = useState(0);
-
-  // Selections & Configuration State
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, Record<string, any>>>({});
-  
-  // Submission contact details
   const [contactData, setContactData] = useState<ContactData | null>(null);
+  
+  // Project-wide multipliers state
+  const [projectModifiers, setProjectModifiers] = useState({
+    complexity: "simple",
+    urgency: "normal",
+    quality: "standard"
+  });
 
-  // Update question answers
+  const [currency, setCurrency] = useState("₹");
+
+  useEffect(() => {
+    initDb();
+    setCurrency(getGlobalSettings().currency);
+  }, []);
+
+  const handleModifierChange = (name: string, value: string) => {
+    setProjectModifiers((prev) => ({ ...prev, [name]: value }));
+  };
+
   const handleAnswerChange = (serviceId: string, questionId: string, value: any) => {
     setAnswers((prev) => ({
       ...prev,
@@ -50,14 +58,44 @@ export default function Home() {
     }));
   };
 
-  // Navigations
   const handleStart = () => setCurrentStep(1);
   const handleNextFromSelector = () => setCurrentStep(2);
   const handleNextFromForm = () => setCurrentStep(3);
   const handleNextFromSummary = () => setCurrentStep(4);
   
-  const handleContactSubmit = (data: ContactData) => {
+  const handleContactSubmit = (data: ContactData, modifiers: typeof projectModifiers) => {
     setContactData(data);
+    
+    // Save estimate and enquiry to dynamic db
+    const services = getServices();
+    const activeServices = services.filter((s) => selectedServiceIds.includes(s.id));
+    const serviceNames = activeServices.map((s) => s.name);
+    
+    const result = calculateProjectCosts(selectedServiceIds, answers, modifiers);
+    const rangeText = `${currency}${result.estimatedMin.toLocaleString()} - ${currency}${result.estimatedMax.toLocaleString()}`;
+
+    // Add to DB
+    addEnquiry({
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      company: data.company,
+      selectedServices: selectedServiceIds,
+      estimateRange: rangeText,
+      message: data.notes,
+      status: "pending"
+    });
+
+    addEstimate({
+      customerName: data.name,
+      customerEmail: data.email,
+      serviceNames: serviceNames,
+      totalPrice: result.finalCost,
+      status: "pending",
+      breakdown: result,
+      answers: answers
+    });
+
     setCurrentStep(5);
   };
 
@@ -69,11 +107,14 @@ export default function Home() {
     setSelectedServiceIds([]);
     setAnswers({});
     setContactData(null);
+    setProjectModifiers({
+      complexity: "simple",
+      urgency: "normal",
+      quality: "standard"
+    });
     setCurrentStep(0);
   };
 
-  // Maps workflow step active index to ProgressStepper index
-  // Returns -1 if we are on Hero screen (step 0)
   const stepperIndex = currentStep > 0 ? currentStep - 1 : -1;
 
   return (
@@ -91,12 +132,13 @@ export default function Home() {
               <ShieldCheck className="w-4 h-4 text-dezprox-accent" />
               Secure Data Guarantee
             </span>
-            <a 
-              href="mailto:support@dezprox.com"
-              className="text-dezprox-primary hover:underline flex items-center gap-1 font-semibold"
+            <Link 
+              href="/admin" 
+              className="inline-flex items-center gap-1.5 text-dezprox-primary hover:text-dezprox-accent transition-colors border border-gray-200 hover:border-dezprox-accent/20 bg-white/50 hover:bg-dezprox-accent/5 px-4 py-2 rounded-full text-xs transition-all shadow-sm"
             >
-              Need Support?
-            </a>
+              <Settings className="w-3.5 h-3.5 text-dezprox-accent" />
+              Admin Portal
+            </Link>
           </div>
         </div>
       </header>
@@ -173,6 +215,7 @@ export default function Home() {
                     selectedServiceIds={selectedServiceIds}
                     answers={answers}
                     sidebarMode={true}
+                    projectModifiers={projectModifiers}
                   />
                 </div>
               </motion.div>
@@ -193,6 +236,7 @@ export default function Home() {
                   onBack={handleBackToForm}
                   onNext={handleNextFromSummary}
                   sidebarMode={false}
+                  projectModifiers={projectModifiers}
                 />
               </motion.div>
             )}
@@ -211,6 +255,8 @@ export default function Home() {
                   answers={answers}
                   onSubmit={handleContactSubmit}
                   onBack={handleBackToSummary}
+                  projectModifiers={projectModifiers}
+                  onModifierChange={handleModifierChange}
                 />
               </motion.div>
             )}
@@ -229,6 +275,7 @@ export default function Home() {
                   answers={answers}
                   contactData={contactData}
                   onReset={handleReset}
+                  projectModifiers={projectModifiers}
                 />
               </motion.div>
             )}
