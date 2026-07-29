@@ -17,6 +17,7 @@ import {
 import { Plus, Edit, Trash2, X, Save, Settings2 } from "lucide-react";
 
 export default function PricingComponentBuilder() {
+  const [mounted, setMounted] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
   const [currency, setCurrency] = useState("₹");
@@ -26,6 +27,7 @@ export default function PricingComponentBuilder() {
   const [editingComponent, setEditingComponent] = useState<Partial<PricingComponent> | null>(null);
 
   useEffect(() => {
+    setMounted(true);
     const list = getServices();
     setServices(list);
     if (list.length > 0) {
@@ -33,6 +35,18 @@ export default function PricingComponentBuilder() {
     }
     setCurrency(getGlobalSettings().currency);
   }, []);
+
+  if (!mounted) {
+    return (
+      <div className="space-y-8 font-sans animate-pulse">
+        <div>
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+        <div className="h-32 bg-gray-200 rounded-xl"></div>
+      </div>
+    );
+  }
 
   const activeService = services.find((s) => s.id === selectedServiceId);
   const components = activeService?.pricingComponents || [];
