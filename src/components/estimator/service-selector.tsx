@@ -4,10 +4,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, ArrowRight } from "lucide-react";
 import { twMerge } from "tailwind-merge";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { getServices, getGlobalSettings, Service } from "@/utils/db";
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: {},
   visible: {
     transition: {
@@ -16,7 +16,7 @@ const containerVariants = {
   }
 };
 
-const cardVariants = {
+const cardVariants: Variants = {
   hidden: { opacity: 0, y: 16 },
   visible: { 
     opacity: 1, 
