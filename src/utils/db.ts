@@ -11,6 +11,8 @@ export interface PricingComponent {
   iconName?: string;
   status?: "active" | "inactive";
   category?: string;
+  billingCycle?: "one-time" | "monthly";
+  note?: string;
 }
 
 export interface ValidationRule {
@@ -213,7 +215,7 @@ const isClient = typeof window !== "undefined";
 export const initDb = () => {
   if (!isClient) return;
 
-  const currentDbVersion = "db_v10";
+  const currentDbVersion = "db_v13";
   const storedVersion = localStorage.getItem("dezprox_db_version");
 
   if (storedVersion !== currentDbVersion) {
@@ -234,6 +236,13 @@ export const initDb = () => {
           { id: `website-amc`, name: "Annual Maintenance Contract (AMC)", type: "fixed", fixedPrice: 2000, perUnitPrice: 0, description: "Includes core updates, security patches and optimizations", maxQuantity: 1, iconName: "Shield", status: "active", category: "Standard Add-ons" },
           { id: `website-whatsapp`, name: "WhatsApp Integration Support", type: "fixed", fixedPrice: 1999, perUnitPrice: 0, description: "Direct customer contact chat widgets setup", maxQuantity: 1, iconName: "MessageCircle", status: "active", category: "Standard Add-ons" },
           { id: `website-blogs`, name: "Dynamic Blog System Setup", type: "fixed", fixedPrice: 4999, perUnitPrice: 0, description: "Publish content updates and articles", maxQuantity: 1, iconName: "FileText", status: "active", category: "Standard Add-ons" }
+        );
+      } else if (s.id === "digital-marketing") {
+        pricingComponents.push(
+          { id: "marketing-meta-ads", name: "Meta Ads", type: "fixed", fixedPrice: 8000, perUnitPrice: 0, description: "One-time campaign setup.", status: "active", category: "Marketing Services", billingCycle: "one-time", note: "Meta Ads is a one-time campaign setup. If you require Meta Ads again in the future, this service must be purchased again." },
+          { id: "marketing-social-media", name: "Social Media Handling", type: "fixed", fixedPrice: 3000, perUnitPrice: 0, description: "Social Media Handling monthly service.", status: "active", category: "Marketing Services", billingCycle: "monthly" },
+          { id: "marketing-reel-shoot", name: "Reel Video Shoot", type: "fixed", fixedPrice: 12000, perUnitPrice: 0, description: "One-Time Reel Video Shoot service.", status: "active", category: "Content Creation Services", billingCycle: "one-time" },
+          { id: "marketing-reel-edit", name: "30-Second Reel Edit", type: "fixed", fixedPrice: 999, perUnitPrice: 0, description: "One-Time 30-Second Reel Edit service.", status: "active", category: "Content Creation Services", billingCycle: "one-time" }
         );
       }
 
@@ -292,7 +301,7 @@ export const initDb = () => {
             isPopular: true, 
             displayOrder: 3, 
             status: "active", 
-            features: ["Custom Code", "Admin Panel Integrations", "Domain Included (1 Year)"],
+            features: ["Custom Code", "Domain Included (1 Year)"],
             questions: [
               { id: "extra-pages", text: "Extra Pages Needed", type: "counter", isRequired: false, displayOrder: 0, defaultValue: 0, priceModifier: 3500, modifierType: "flat" }
             ]
@@ -315,10 +324,6 @@ export const initDb = () => {
         packages.push(
           { id: "brand-logo", name: "Logo Design", price: 4999, timeline: "1 Week", description: "Creative logo assets and graphics drafts.", isRecommended: false, isPopular: false, displayOrder: 0, status: "active", features: ["3 Logo Draft Concepts", "Vector Output Deliverables"] },
           { id: "brand-guidelines", name: "Brand Guidelines", price: 9999, timeline: "2 Weeks", description: "Complete visual identity stylebook.", isRecommended: true, isPopular: true, displayOrder: 1, status: "active", features: ["Color Palette", "Typography Stylebook", "Logo Usage Rules"] }
-        );
-      } else if (s.id === "digital-marketing") {
-        packages.push(
-          { id: "marketing-std", name: "Digital Marketing Campaign", price: 14999, timeline: "Monthly", description: "Paid acquisition campaigns and content.", isRecommended: true, isPopular: true, displayOrder: 0, status: "active", features: ["Social Media Ads Setup", "Google Analytics Audit"] }
         );
       }
 

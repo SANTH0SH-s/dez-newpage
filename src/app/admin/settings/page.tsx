@@ -25,7 +25,7 @@ export default function GlobalSettingsView() {
     setSettings({
       ...settings,
       [field]: field === "taxRate" || field === "discountRate" || field === "minimumCost" || field === "maximumCost" 
-        ? parseFloat(value) || 0 
+        ? (value === "" ? "" : value)
         : value
     });
   };
@@ -34,7 +34,16 @@ export default function GlobalSettingsView() {
     e.preventDefault();
     if (!settings) return;
 
-    saveGlobalSettings(settings);
+    const cleanedSettings: GlobalSettings = {
+      ...settings,
+      taxRate: parseFloat(settings.taxRate as any) || 0,
+      discountRate: parseFloat(settings.discountRate as any) || 0,
+      minimumCost: parseFloat(settings.minimumCost as any) || 0,
+      maximumCost: parseFloat(settings.maximumCost as any) || 0,
+    };
+
+    saveGlobalSettings(cleanedSettings);
+    setSettings(cleanedSettings);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
   };

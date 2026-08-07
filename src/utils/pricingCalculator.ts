@@ -6,6 +6,7 @@ export interface CostBreakdownItem {
   type: "base" | "addon" | "multiplier";
   costLabel: string;
   amount: number;
+  billingCycle?: "one-time" | "monthly";
 }
 
 export interface ServiceCostBreakdown {
@@ -29,6 +30,14 @@ export interface TotalCalculationResult {
   discountAmount: number;
   finalCost: number;
   estimatedTimeline: string;
+  oneTimeSubtotal: number;
+  monthlySubtotal: number;
+  oneTimeDiscount: number;
+  monthlyDiscount: number;
+  oneTimeTax: number;
+  monthlyTax: number;
+  oneTimeFinalCost: number;
+  monthlyFinalCost: number;
 }
 
 export const calculateProjectCosts = (
@@ -53,13 +62,18 @@ export const calculateProjectCosts = (
 
     let basePrice = service.basePrice;
     let baseLabel = `${service.name} (Base Service)`;
-
+    let isBaseMonthly = false;
     if (selectedPackageId && service.packages) {
       const pkg = service.packages.find((p: any) => p.id === selectedPackageId);
       if (pkg) {
         basePrice = pkg.price;
         baseLabel = `${service.name} (${pkg.name} Package)`;
+        if (pkg.timeline === "Monthly") {
+          isBaseMonthly = true;
+        }
       }
+    } else if (serviceId === "seo") {
+      isBaseMonthly = true;
     }
 
     totalBaseCost += basePrice;
@@ -69,8 +83,9 @@ export const calculateProjectCosts = (
         id: `${serviceId}-base`,
         name: baseLabel,
         type: "base",
-        costLabel: `${settings.currency}${basePrice.toLocaleString()}`,
-        amount: basePrice
+        costLabel: `${settings.currency}${basePrice.toLocaleString()}${isBaseMonthly ? "/month" : ""}`,
+        amount: basePrice,
+        billingCycle: isBaseMonthly ? "monthly" : "one-time"
       }
     ];
 
@@ -232,14 +247,17 @@ export const calculateProjectCosts = (
         if (comp.status === "inactive") return;
         
         if (selectedComponents.includes(comp.id)) {
+          const billing = comp.billingCycle || "one-time";
+          const cycleSuffix = billing === "monthly" ? "/month" : "";
           if (comp.type === "fixed") {
             flatAddons += comp.fixedPrice;
             details.push({
               id: comp.id,
               name: `Add-on: ${comp.name}`,
               type: "addon",
-              costLabel: `+${settings.currency}${comp.fixedPrice.toLocaleString()}`,
-              amount: comp.fixedPrice
+              costLabel: `+${settings.currency}${comp.fixedPrice.toLocaleString()}${cycleSuffix}`,
+              amount: comp.fixedPrice,
+              billingCycle: billing
             });
           } else if (comp.type === "per-unit") {
             let units = componentUnits[comp.id] || 1;
@@ -252,8 +270,9 @@ export const calculateProjectCosts = (
               id: comp.id,
               name: `Add-on: ${comp.name} (${units} ${service.unitType || "units"})`,
               type: "addon",
-              costLabel: `+${settings.currency}${cost.toLocaleString()}`,
-              amount: cost
+              costLabel: `+${settings.currency}${cost.toLocaleString()}${cycleSuffix}`,
+              amount: cost,
+              billingCycle: billing
             });
           }
         }
@@ -302,26 +321,58 @@ export const calculateProjectCosts = (
     });
   });
 
-  // Apply project-wide multipliers
+  // Apply project-wide multipliers to one-time charges, keep monthly flat
   const compOpt = multipliers.complexity.find((m) => m.id === projectModifiers?.complexity) || { value: 1.0 };
   const urgOpt = multipliers.urgency.find((m) => m.id === projectModifiers?.urgency) || { value: 1.0 };
   const qualOpt = multipliers.quality.find((m) => m.id === projectModifiers?.quality) || { value: 1.0 };
 
-  let finalCost = totalCalculatedCost * compOpt.value * urgOpt.value * qualOpt.value;
+  // Calculate subtotals by scanning details
+  let oneTimeSubtotal = 0;
+  let monthlySubtotal = 0;
+
+  servicesBreakdown.forEach((srv) => {
+    let srvOneTime = 0;
+    let srvMonthly = 0;
+    srv.details.forEach((d) => {
+      if (d.type !== "multiplier") {
+        if (d.billingCycle === "monthly") {
+          srvMonthly += d.amount;
+        } else {
+          srvOneTime += d.amount;
+        }
+      }
+    });
+    oneTimeSubtotal += srvOneTime * srv.multiplierProduct;
+    monthlySubtotal += srvMonthly * srv.multiplierProduct;
+  });
+
+  let finalOneTimeCost = oneTimeSubtotal * compOpt.value * urgOpt.value * qualOpt.value;
+  let finalMonthlyCost = monthlySubtotal;
 
   // Apply discounts
-  let discountAmount = 0;
+  let oneTimeDiscount = 0;
   if (settings.discountRate > 0) {
-    discountAmount = finalCost * (settings.discountRate / 100);
-    finalCost -= discountAmount;
+    oneTimeDiscount = finalOneTimeCost * (settings.discountRate / 100);
+  }
+  let monthlyDiscount = 0;
+  if (settings.discountRate > 0) {
+    monthlyDiscount = finalMonthlyCost * (settings.discountRate / 100);
   }
 
   // Apply tax
-  let taxAmount = 0;
+  let oneTimeTax = 0;
   if (settings.taxRate > 0) {
-    taxAmount = finalCost * (settings.taxRate / 100);
-    finalCost += taxAmount;
+    oneTimeTax = (finalOneTimeCost - oneTimeDiscount) * (settings.taxRate / 100);
   }
+  let monthlyTax = 0;
+  if (settings.taxRate > 0) {
+    monthlyTax = (finalMonthlyCost - monthlyDiscount) * (settings.taxRate / 100);
+  }
+
+  let oneTimeFinalCost = finalOneTimeCost - oneTimeDiscount + oneTimeTax;
+  let monthlyFinalCost = finalMonthlyCost - monthlyDiscount + monthlyTax;
+
+  let finalCost = oneTimeFinalCost + monthlyFinalCost;
 
   // Bound within settings constraints
   if (finalCost < settings.minimumCost) finalCost = settings.minimumCost;
@@ -357,10 +408,18 @@ export const calculateProjectCosts = (
     totalCalculatedCost,
     estimatedMin,
     estimatedMax,
-    taxAmount,
-    discountAmount,
+    taxAmount: oneTimeTax + monthlyTax,
+    discountAmount: oneTimeDiscount + monthlyDiscount,
     finalCost,
-    estimatedTimeline: finalProjectTimeline
+    estimatedTimeline: finalProjectTimeline,
+    oneTimeSubtotal,
+    monthlySubtotal,
+    oneTimeDiscount,
+    monthlyDiscount,
+    oneTimeTax,
+    monthlyTax,
+    oneTimeFinalCost,
+    monthlyFinalCost
   };
 };
 

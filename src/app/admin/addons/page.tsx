@@ -75,7 +75,9 @@ export default function AddonManager() {
       maxQuantity: 1,
       iconName: "Settings",
       status: "active",
-      category: "Integrations"
+      category: "Integrations",
+      billingCycle: "one-time",
+      note: ""
     });
     setIsEditorOpen(true);
   };
@@ -86,7 +88,9 @@ export default function AddonManager() {
       maxQuantity: comp.maxQuantity ?? 1,
       iconName: comp.iconName ?? "Settings",
       status: comp.status ?? "active",
-      category: comp.category ?? "Integrations"
+      category: comp.category ?? "Integrations",
+      billingCycle: comp.billingCycle ?? "one-time",
+      note: comp.note ?? ""
     });
     setIsEditorOpen(true);
   };
@@ -125,7 +129,9 @@ export default function AddonManager() {
       maxQuantity: editingComponent.maxQuantity ?? 1,
       iconName: editingComponent.iconName || "Settings",
       status: editingComponent.status || "active",
-      category: editingComponent.category || "Integrations"
+      category: editingComponent.category || "Integrations",
+      billingCycle: editingComponent.billingCycle || "one-time",
+      note: editingComponent.note || ""
     };
 
     if (index > -1) {
@@ -228,9 +234,17 @@ export default function AddonManager() {
                             <Badge variant="secondary" className="capitalize text-[8px] py-0.5 font-bold bg-slate-50 text-gray-500 border border-gray-200">
                               {comp.type === "fixed" ? "Fixed Cost" : "Quantity Cost"}
                             </Badge>
+                            <Badge variant="secondary" className="capitalize text-[8px] py-0.5 font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              {comp.billingCycle || "one-time"}
+                            </Badge>
                           </div>
                         </div>
-                        <p className="text-xs text-gray-500 leading-relaxed mb-4">{comp.description}</p>
+                        <p className="text-xs text-gray-550 leading-relaxed mb-3">{comp.description}</p>
+                        {comp.note && (
+                          <p className="text-[10px] text-amber-700 font-semibold bg-amber-50/40 p-2 rounded-lg border border-amber-100/40 mb-3">
+                            {comp.note}
+                          </p>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-between border-t border-gray-50 pt-4 mt-2">
@@ -414,6 +428,24 @@ export default function AddonManager() {
                   )}
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Billing Cycle */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Billing Cycle</label>
+                    <Select
+                      options={[
+                        { value: "one-time", label: "One-Time" },
+                        { value: "monthly", label: "Monthly" },
+                      ]}
+                      value={editingComponent.billingCycle || "one-time"}
+                      onChange={(e) => setEditingComponent({ ...editingComponent, billingCycle: e.target.value as "one-time" | "monthly" })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    {/* Empty spacer or additional info */}
+                  </div>
+                </div>
+
                 {/* Description */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Description</label>
@@ -422,6 +454,17 @@ export default function AddonManager() {
                     value={editingComponent.description || ""}
                     onChange={(e) => setEditingComponent({ ...editingComponent, description: e.target.value })}
                     rows={3}
+                  />
+                </div>
+
+                {/* Note */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Important Note (Optional)</label>
+                  <Textarea
+                    placeholder="Provide a warning/notice details to display in the estimator option..."
+                    value={editingComponent.note || ""}
+                    onChange={(e) => setEditingComponent({ ...editingComponent, note: e.target.value })}
+                    rows={2}
                   />
                 </div>
 

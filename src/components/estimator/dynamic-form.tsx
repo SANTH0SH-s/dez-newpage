@@ -761,6 +761,11 @@ export const DynamicForm = ({
                                         {comp.description}
                                       </span>
                                     )}
+                                    {comp.note && (
+                                      <span className="text-[10px] text-amber-750 font-semibold mt-2 leading-relaxed block pl-6 bg-amber-50/40 p-2 rounded-lg border border-amber-100/40">
+                                        {comp.note}
+                                      </span>
+                                    )}
                                     {isSelected && comp.type === "per-unit" && (
                                       <div 
                                         className="mt-3 flex items-center space-x-2 pl-6"

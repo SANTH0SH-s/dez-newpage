@@ -92,13 +92,15 @@ export const PriceSummary = ({
   }
 
   // Calculations mirroring Quotation Proposal values
-  const subtotal = result.totalCalculatedCost;
-  const discountRate = currentSettings.discountRate / 100;
-  const discountAmount = subtotal * discountRate;
-  const taxableAmount = subtotal - discountAmount;
-  const taxRate = currentSettings.taxRate / 100;
-  const taxAmount = taxableAmount * taxRate;
-  const grandTotal = taxableAmount + taxAmount;
+  const subtotal = result.oneTimeSubtotal;
+  const discountAmount = result.oneTimeDiscount;
+  const taxAmount = result.oneTimeTax;
+  const grandTotal = result.oneTimeFinalCost;
+
+  const monthlySubtotal = result.monthlySubtotal;
+  const monthlyDiscount = result.monthlyDiscount;
+  const monthlyTax = result.monthlyTax;
+  const monthlyGrandTotal = result.monthlyFinalCost;
 
   const showGate = !!currentSettings.gateEstimateWithLeadForm && !contactData;
 
@@ -134,36 +136,58 @@ export const PriceSummary = ({
   };
 
   // Render Itemized breakdown rows
-  const renderItemizedBreakdown = () => (
-    <div className="space-y-4">
-      {result.services.map((srv) => {
-        const baseItem = srv.details.find((d: any) => d.type === "base");
-        const displayName = baseItem ? baseItem.name : srv.serviceName;
-        const addonsList = srv.details.filter(d => d.type !== "base");
+  const renderItemizedBreakdown = () => {
+    const oneTimeItems: { name: string; costLabel: string }[] = [];
+    const monthlyItems: { name: string; costLabel: string }[] = [];
 
-        return (
-          <div key={srv.serviceId} className="border-b border-gray-50 pb-3 last:border-b-0 last:pb-0">
-            <div className="flex justify-between items-start font-bold text-dezprox-primary text-xs">
-              <span className="max-w-[80%] leading-tight">{displayName}</span>
-              <span className="shrink-0 font-sans">
-                {currency}{Math.round(srv.totalCost).toLocaleString()}
-              </span>
+    result.services.forEach((srv) => {
+      srv.details.forEach((d) => {
+        if (d.type !== "multiplier") {
+          const item = {
+            name: `${srv.serviceName} - ${d.name.replace("Add-on: ", "")}`,
+            costLabel: d.costLabel
+          };
+          if (d.billingCycle === "monthly") {
+            monthlyItems.push(item);
+          } else {
+            oneTimeItems.push(item);
+          }
+        }
+      });
+    });
+
+    return (
+      <div className="space-y-4">
+        {oneTimeItems.length > 0 && (
+          <div>
+            <h5 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">One-Time Charges</h5>
+            <div className="space-y-2">
+              {oneTimeItems.map((item, idx) => (
+                <div key={`ot-${idx}`} className="flex justify-between text-xs font-semibold text-dezprox-primary">
+                  <span className="max-w-[80%] leading-tight">{item.name}</span>
+                  <span className="shrink-0 font-sans">{item.costLabel}</span>
+                </div>
+              ))}
             </div>
-            {addonsList.length > 0 && (
-              <ul className="mt-1 space-y-0.5 pl-3 list-disc">
-                {addonsList.map((addon) => (
-                  <li key={addon.id} className="flex justify-between text-[10px] text-dezprox-text/50 font-medium font-sans">
-                    <span className="truncate pr-4">{addon.name}</span>
-                    <span className="shrink-0 font-sans">{addon.costLabel}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
-        );
-      })}
-    </div>
-  );
+        )}
+
+        {monthlyItems.length > 0 && (
+          <div className="pt-2 border-t border-gray-100/50">
+            <h5 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Monthly Charges</h5>
+            <div className="space-y-2">
+              {monthlyItems.map((item, idx) => (
+                <div key={`m-${idx}`} className="flex justify-between text-xs font-semibold text-dezprox-primary">
+                  <span className="max-w-[80%] leading-tight">{item.name}</span>
+                  <span className="shrink-0 font-sans">{item.costLabel}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // MOBILE BOTTOM SHEET DRAWER
   if (isMobileSheet) {
@@ -182,6 +206,11 @@ export const PriceSummary = ({
               <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block">Running Estimate</span>
               <span className="text-base font-black text-dezprox-primary">
                 <AnimatedNumber value={grandTotal} currency={currency} />
+                {monthlyGrandTotal > 0 && (
+                  <span className="text-xs font-bold text-gray-500 ml-1">
+                    + <AnimatedNumber value={monthlyGrandTotal} currency={currency} />/mo
+                  </span>
+                )}
               </span>
             </div>
           </div>
@@ -234,25 +263,49 @@ export const PriceSummary = ({
                 {/* Ledger calculation table */}
                 <div className="bg-gray-50/50 border border-gray-100 rounded-2xl p-4 space-y-2 text-xs font-semibold text-dezprox-text/80 mb-6">
                   <div className="flex justify-between">
-                    <span>Subtotal:</span>
+                    <span>One-Time Subtotal:</span>
                     <span className="text-dezprox-primary font-bold">{currency}{Math.round(subtotal).toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-green-600">
-                    <span>Discount ({Math.round(currentSettings.discountRate)}%):</span>
-                    <span>-{currency}{Math.round(discountAmount).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>GST Tax ({Math.round(currentSettings.taxRate)}%):</span>
-                    <span>+{currency}{Math.round(taxAmount).toLocaleString()}</span>
-                  </div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>One-Time Discount ({Math.round(currentSettings.discountRate)}%):</span>
+                      <span>-{currency}{Math.round(discountAmount).toLocaleString()}</span>
+                    </div>
+                  )}
+                  {taxAmount > 0 && (
+                    <div className="flex justify-between">
+                      <span>One-Time GST ({Math.round(currentSettings.taxRate)}%):</span>
+                      <span>+{currency}{Math.round(taxAmount).toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t border-gray-200 pt-2 font-black text-dezprox-primary text-xs">
-                    <span>Est. Timeline:</span>
-                    <motion.span key={result.estimatedTimeline} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="font-bold">{result.estimatedTimeline}</motion.span>
+                    <span>One-Time Total:</span>
+                    <span className="text-sm font-extrabold"><AnimatedNumber value={grandTotal} currency={currency} /></span>
                   </div>
-                  <div className="flex justify-between border-t border-gray-200 pt-2 font-black text-dezprox-primary text-sm">
-                    <span>Total Estimate:</span>
-                    <span className="text-base font-extrabold"><AnimatedNumber value={grandTotal} currency={currency} /></span>
-                  </div>
+                  {monthlySubtotal > 0 && (
+                    <div className="border-t border-gray-200 pt-2 mt-2 space-y-1">
+                      <div className="flex justify-between">
+                        <span>Monthly Subtotal:</span>
+                        <span className="text-dezprox-primary font-bold">{currency}{Math.round(monthlySubtotal).toLocaleString()}/month</span>
+                      </div>
+                      {monthlyDiscount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                          <span>Monthly Discount ({Math.round(currentSettings.discountRate)}%):</span>
+                          <span>-{currency}{Math.round(monthlyDiscount).toLocaleString()}/month</span>
+                        </div>
+                      )}
+                      {monthlyTax > 0 && (
+                        <div className="flex justify-between">
+                          <span>Monthly GST ({Math.round(currentSettings.taxRate)}%):</span>
+                          <span>+{currency}{Math.round(monthlyTax).toLocaleString()}/month</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t border-gray-150 pt-1 font-black text-dezprox-primary text-xs">
+                        <span>Monthly Total:</span>
+                        <span className="text-sm font-extrabold"><AnimatedNumber value={monthlyGrandTotal} currency={currency} />/month</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <Button
@@ -279,10 +332,15 @@ export const PriceSummary = ({
           <span className="text-[10px] font-black uppercase tracking-wider block text-dezprox-accent">
             Live Pricing Calculator
           </span>
-          <div className="mt-2 flex items-baseline justify-start">
-            <span className="text-2xl font-black font-sans">
-              <AnimatedNumber value={grandTotal} currency={currency} />
+          <div className="mt-2 flex flex-col justify-start">
+            <span className="text-xl font-black font-sans">
+              One-Time: <AnimatedNumber value={grandTotal} currency={currency} />
             </span>
+            {monthlyGrandTotal > 0 && (
+              <span className="text-base font-black font-sans text-dezprox-accent mt-1 animate-pulse">
+                Monthly: <AnimatedNumber value={monthlyGrandTotal} currency={currency} />/month
+              </span>
+            )}
           </div>
           <span className="text-[10px] text-white/50 block mt-1 font-semibold uppercase">
             Inc. {Math.round(currentSettings.taxRate)}% Tax & {Math.round(currentSettings.discountRate)}% Discount
@@ -302,17 +360,41 @@ export const PriceSummary = ({
           {/* Subtotals Ledger */}
           <div className="border-t border-gray-100 pt-4 space-y-2 text-xs font-semibold text-dezprox-text/80">
             <div className="flex justify-between">
-              <span>Subtotal:</span>
+              <span>One-Time Subtotal:</span>
               <span className="text-dezprox-primary font-bold">{currency}{Math.round(subtotal).toLocaleString()}</span>
             </div>
-            <div className="flex justify-between text-green-600">
-              <span>Discount ({Math.round(currentSettings.discountRate)}%):</span>
-              <span>-{currency}{Math.round(discountAmount).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>GST Tax ({Math.round(currentSettings.taxRate)}%):</span>
-              <span>+{currency}{Math.round(taxAmount).toLocaleString()}</span>
-            </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-green-600">
+                <span>One-Time Discount ({Math.round(currentSettings.discountRate)}%):</span>
+                <span>-{currency}{Math.round(discountAmount).toLocaleString()}</span>
+              </div>
+            )}
+            {taxAmount > 0 && (
+              <div className="flex justify-between">
+                <span>One-Time GST ({Math.round(currentSettings.taxRate)}%):</span>
+                <span>+{currency}{Math.round(taxAmount).toLocaleString()}</span>
+              </div>
+            )}
+            {monthlyGrandTotal > 0 && (
+              <div className="border-t border-gray-100 pt-2 mt-2 space-y-1">
+                <div className="flex justify-between">
+                  <span>Monthly Subtotal:</span>
+                  <span className="text-dezprox-primary font-bold">{currency}{Math.round(monthlySubtotal).toLocaleString()}/month</span>
+                </div>
+                {monthlyDiscount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Monthly Discount ({Math.round(currentSettings.discountRate)}%):</span>
+                    <span>-{currency}{Math.round(monthlyDiscount).toLocaleString()}/month</span>
+                  </div>
+                )}
+                {monthlyTax > 0 && (
+                  <div className="flex justify-between">
+                    <span>Monthly GST ({Math.round(currentSettings.taxRate)}%):</span>
+                    <span>+{currency}{Math.round(monthlyTax).toLocaleString()}/month</span>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex justify-between border-t border-gray-100 pt-2 text-dezprox-primary font-bold">
               <span>Timeline:</span>
               <motion.span key={result.estimatedTimeline} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="font-bold">{result.estimatedTimeline}</motion.span>
@@ -344,62 +426,170 @@ export const PriceSummary = ({
 
       <div className="relative">
         <Card className={twMerge("border-gray-250 shadow-md bg-white rounded-2xl p-6 md:p-8 space-y-6 transition-all duration-300", showGate ? "filter blur-md select-none pointer-events-none" : "")}>
-          <div className="border-b border-gray-100 pb-5 flex justify-between items-baseline">
+          <div className="border-b border-gray-100 pb-5 flex flex-col md:flex-row justify-between items-baseline gap-2">
             <div>
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider block">Estimated Grand Total</span>
-              <span className="text-2xl md:text-3xl font-black text-dezprox-primary tracking-tight">
-                <AnimatedNumber value={grandTotal} currency={currency} />
-              </span>
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider block">Estimated Totals</span>
+              <div className="flex flex-col gap-1 mt-1">
+                <span className="text-xl md:text-2xl font-black text-dezprox-primary tracking-tight">
+                  One-Time: <AnimatedNumber value={grandTotal} currency={currency} />
+                </span>
+                {monthlyGrandTotal > 0 && (
+                  <span className="text-lg md:text-xl font-black text-dezprox-accent tracking-tight">
+                    Monthly: <AnimatedNumber value={monthlyGrandTotal} currency={currency} />/month
+                  </span>
+                )}
+              </div>
             </div>
             <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">
               Inc. {Math.round(currentSettings.taxRate)}% Tax & {Math.round(currentSettings.discountRate)}% Discount
             </span>
           </div>
 
-          {/* Scope Rows */}
-          <div className="divide-y divide-gray-100">
-            {result.services.map((srv) => {
-              const baseItem = srv.details.find((d: any) => d.type === "base");
-              const displayName = baseItem ? baseItem.name : srv.serviceName;
-              const addonsList = srv.details.filter(d => d.type !== "base");
-
+          {/* Scope Rows divided by Billing Cycle */}
+          <div className="space-y-6">
+            {/* One-Time charges group */}
+            {(() => {
+              const otServices = result.services.filter(s => s.details.some(d => d.billingCycle !== "monthly"));
+              if (otServices.length === 0) return null;
               return (
-                <div key={srv.serviceId} className="py-4 first:pt-0 last:pb-0">
-                  <div className="flex justify-between items-start font-bold text-dezprox-primary text-sm">
-                    <span>{displayName}</span>
-                    <span>{currency}{Math.round(srv.totalCost).toLocaleString()}</span>
-                  </div>
-                  {addonsList.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                      {addonsList.map((addon) => (
-                        <div key={addon.id} className="flex justify-between items-center p-2.5 bg-gray-50 border border-gray-100 rounded-lg text-xs">
-                          <span className="font-semibold text-dezprox-primary">{addon.name}</span>
-                          <span className="font-bold text-dezprox-primary font-sans shrink-0 ml-4">{addon.costLabel}</span>
+                <div className="space-y-3">
+                  <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest leading-none border-b border-gray-100 pb-2">
+                    One-Time Services
+                  </h4>
+                  <div className="divide-y divide-gray-100">
+                    {otServices.map((srv) => {
+                      const oneTimeDetails = srv.details.filter(d => d.billingCycle !== "monthly");
+                      const baseItem = oneTimeDetails.find(d => d.type === "base");
+                      const displayName = baseItem ? baseItem.name : srv.serviceName;
+                      const addonsList = oneTimeDetails.filter(d => d.type !== "base");
+
+                      let srvOtCost = 0;
+                      oneTimeDetails.forEach(d => {
+                        if (d.type !== "multiplier") srvOtCost += d.amount;
+                      });
+                      srvOtCost *= srv.multiplierProduct;
+
+                      return (
+                        <div key={`ot-${srv.serviceId}`} className="py-3 first:pt-0 last:pb-0">
+                          <div className="flex justify-between items-start font-bold text-dezprox-primary text-sm">
+                            <span>{displayName}</span>
+                            <span>{currency}{Math.round(srvOtCost).toLocaleString()}</span>
+                          </div>
+                          {addonsList.length > 0 && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                              {addonsList.map((addon) => (
+                                <div key={addon.id} className="flex justify-between items-center p-2.5 bg-gray-50/50 border border-gray-100 rounded-lg text-xs">
+                                  <span className="font-semibold text-dezprox-primary">{addon.name}</span>
+                                  <span className="font-bold text-dezprox-primary font-sans shrink-0 ml-4">{addon.costLabel}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[10px] text-gray-400 italic mt-1.5">No custom add-on building blocks selected.</p>
-                  )}
+                      );
+                    })}
+                  </div>
                 </div>
               );
-            })}
+            })()}
+
+            {/* Monthly subscription charges group */}
+            {monthlySubtotal > 0 && (
+              <div className="space-y-3 pt-4 border-t border-gray-100">
+                <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest leading-none border-b border-gray-100 pb-2">
+                  Monthly Subscription Services
+                </h4>
+                <div className="divide-y divide-gray-100">
+                  {result.services.filter(s => s.details.some(d => d.billingCycle === "monthly")).map((srv) => {
+                    const monthlyDetails = srv.details.filter(d => d.billingCycle === "monthly");
+                    const baseItem = monthlyDetails.find(d => d.type === "base");
+                    const displayName = baseItem ? baseItem.name : srv.serviceName;
+                    const addonsList = monthlyDetails.filter(d => d.type !== "base");
+
+                    let srvMoCost = 0;
+                    monthlyDetails.forEach(d => {
+                      if (d.type !== "multiplier") srvMoCost += d.amount;
+                    });
+                    srvMoCost *= srv.multiplierProduct;
+
+                    return (
+                      <div key={`mo-${srv.serviceId}`} className="py-3 first:pt-0 last:pb-0">
+                        <div className="flex justify-between items-start font-bold text-dezprox-primary text-sm">
+                          <span>{displayName}</span>
+                          <span>{currency}{Math.round(srvMoCost).toLocaleString()}/month</span>
+                        </div>
+                        {addonsList.length > 0 && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                            {addonsList.map((addon) => (
+                              <div key={addon.id} className="flex justify-between items-center p-2.5 bg-gray-50/50 border border-gray-100 rounded-lg text-xs">
+                                <span className="font-semibold text-dezprox-primary">{addon.name}</span>
+                                <span className="font-bold text-dezprox-primary font-sans shrink-0 ml-4">{addon.costLabel}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Totals Ledger */}
-          <div className="bg-gray-50/50 border border-gray-100 rounded-2xl p-6 space-y-3 text-xs font-semibold text-dezprox-text/80 pt-6">
-            <div className="flex justify-between">
-              <span>Subtotal:</span>
-              <span className="text-dezprox-primary font-bold">{currency}{Math.round(subtotal).toLocaleString()}</span>
+          <div className="bg-gray-50/50 border border-gray-100 rounded-2xl p-6 space-y-4 text-xs font-semibold text-dezprox-text/80 pt-6">
+            {/* One-Time section */}
+            <div className="space-y-2">
+              <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">One-Time charges ledger</div>
+              <div className="flex justify-between">
+                <span>One-Time Subtotal:</span>
+                <span className="text-dezprox-primary font-bold">{currency}{Math.round(subtotal).toLocaleString()}</span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>One-Time Discount ({Math.round(currentSettings.discountRate)}%):</span>
+                  <span className="font-bold">-{currency}{Math.round(discountAmount).toLocaleString()}</span>
+                </div>
+              )}
+              {taxAmount > 0 && (
+                <div className="flex justify-between">
+                  <span>One-Time GST ({Math.round(currentSettings.taxRate)}%):</span>
+                  <span className="text-dezprox-primary font-bold">{currency}{Math.round(taxAmount).toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-black text-dezprox-primary text-xs pt-1 border-t border-dashed border-gray-200">
+                <span>One-Time Cost:</span>
+                <span className="text-sm font-extrabold">{currency}{Math.round(grandTotal).toLocaleString()}</span>
+              </div>
             </div>
-            <div className="flex justify-between text-green-600">
-              <span>Corporate Welcome Discount ({Math.round(currentSettings.discountRate)}%):</span>
-              <span className="font-bold">-{currency}{Math.round(discountAmount).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>GST Tax ({Math.round(currentSettings.taxRate)}%):</span>
-              <span className="text-dezprox-primary font-bold">{currency}{Math.round(taxAmount).toLocaleString()}</span>
-            </div>
+
+            {/* Monthly section */}
+            {monthlySubtotal > 0 && (
+              <div className="space-y-2 pt-4 border-t border-gray-255">
+                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Monthly subscription ledger</div>
+                <div className="flex justify-between">
+                  <span>Monthly Subtotal:</span>
+                  <span className="text-dezprox-primary font-bold">{currency}{Math.round(monthlySubtotal).toLocaleString()}/month</span>
+                </div>
+                {monthlyDiscount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Monthly Discount ({Math.round(currentSettings.discountRate)}%):</span>
+                    <span className="font-bold">-{currency}{Math.round(monthlyDiscount).toLocaleString()}/month</span>
+                  </div>
+                )}
+                {monthlyTax > 0 && (
+                  <div className="flex justify-between">
+                    <span>Monthly GST ({Math.round(currentSettings.taxRate)}%):</span>
+                    <span className="text-dezprox-primary font-bold">{currency}{Math.round(monthlyTax).toLocaleString()}/month</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-black text-dezprox-primary text-xs pt-1 border-t border-dashed border-gray-200">
+                  <span>Monthly Cost:</span>
+                  <span className="text-sm font-extrabold">{currency}{Math.round(monthlyGrandTotal).toLocaleString()}/month</span>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between border-t border-gray-250/30 pt-3 text-dezprox-primary font-black text-sm">
               <span>Estimated Project Delivery:</span>
               <motion.span key={result.estimatedTimeline} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="text-base font-extrabold text-dezprox-primary">{result.estimatedTimeline}</motion.span>
