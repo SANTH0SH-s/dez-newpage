@@ -7,63 +7,58 @@ import {
   Briefcase, 
   FileText, 
   HelpCircle, 
-  CheckCircle, 
-  TrendingUp, 
-  ArrowUpRight,
-  Clock
+  CheckCircle,
+  Clock,
+  Flame,
+  ArrowRight
 } from "lucide-react";
 import { 
   getServices, 
   getEstimates, 
-  getEnquiries, 
   getGlobalSettings,
   Service,
-  Estimate,
-  Enquiry
+  Estimate
 } from "@/utils/db";
 
 export default function AdminDashboard() {
   const [services, setServices] = useState<Service[]>([]);
   const [estimates, setEstimates] = useState<Estimate[]>([]);
-  const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [currency, setCurrency] = useState("₹");
 
   useEffect(() => {
     setServices(getServices());
     setEstimates(getEstimates());
-    setEnquiries(getEnquiries());
     setCurrency(getGlobalSettings().currency);
   }, []);
 
   const totalServices = services.length;
   const totalEstimates = estimates.length;
-  const pendingEnquiries = enquiries.filter(e => e.status === "pending").length;
-  const completedEnquiries = enquiries.filter(e => e.status === "completed" || e.status === "archived").length;
-  
-  // Calculate total revenue from approved estimates
-  const totalRevenue = estimates
-    .filter(e => e.status === "approved" || e.status === "completed")
-    .reduce((sum, e) => sum + e.totalPrice, 0);
+  const pendingEstimates = estimates.filter(e => e.status === "pending").length;
 
-  // Combine recent activities
-  const recentActivities = [
-    ...estimates.map(e => ({
-      id: e.id,
-      type: "estimate",
-      title: `Estimate generated for ${e.customerName}`,
-      detail: `${e.serviceNames.join(", ")} - ${currency}${Math.round(e.totalPrice).toLocaleString()}`,
-      date: new Date(e.createdDate),
-      status: e.status
-    })),
-    ...enquiries.map(e => ({
-      id: e.id,
-      type: "enquiry",
-      title: `New enquiry from ${e.name}`,
-      detail: e.message.length > 50 ? `${e.message.slice(0, 50)}...` : e.message,
-      date: new Date(e.createdDate),
-      status: e.status
-    }))
-  ].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
+  // Calculate service popularity based on estimate records
+  const getPopularServices = () => {
+    const counts: Record<string, number> = {};
+    estimates.forEach((est) => {
+      est.serviceNames.forEach((name) => {
+        counts[name] = (counts[name] || 0) + 1;
+      });
+    });
+
+    return services
+      .map((srv) => ({
+        name: srv.name,
+        category: srv.category,
+        count: counts[srv.name] || 0
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 4);
+  };
+
+  const popularServices = getPopularServices();
+
+  const recentEstimates = [...estimates]
+    .sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime())
+    .slice(0, 6);
 
   return (
     <div className="space-y-8 font-sans">
@@ -72,170 +67,122 @@ export default function AdminDashboard() {
           Admin Dashboard
         </h1>
         <p className="text-dezprox-text/60 mt-1 text-sm">
-          Overview of estimations, services metrics, and customer enquiries queues.
+          Simple, clutter-free overview of platform configurations, estimates, and customer leads.
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Total Services */}
-        <Card className="p-5 flex flex-col justify-between">
+        <Card className="p-5 flex flex-col justify-between border-gray-155 shadow-sm bg-white rounded-2xl">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Services</span>
-            <div className="p-2 bg-dezprox-primary/5 text-dezprox-primary rounded-xl">
+            <div className="p-2 bg-dezprox-accent/15 text-dezprox-primary rounded-xl">
               <Briefcase className="w-4 h-4 text-dezprox-accent" />
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-2xl font-black text-dezprox-primary">{totalServices}</span>
+            <span className="text-3xl font-black text-dezprox-primary">{totalServices}</span>
             <span className="text-xs text-gray-400 block mt-1">Configured items</span>
           </div>
         </Card>
 
         {/* Total Estimates */}
-        <Card className="p-5 flex flex-col justify-between">
+        <Card className="p-5 flex flex-col justify-between border-gray-155 shadow-sm bg-white rounded-2xl">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Estimates</span>
-            <div className="p-2 bg-dezprox-primary/5 text-dezprox-primary rounded-xl">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Estimates & Leads</span>
+            <div className="p-2 bg-dezprox-accent/15 text-dezprox-primary rounded-xl">
               <FileText className="w-4 h-4 text-dezprox-accent" />
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-2xl font-black text-dezprox-primary">{totalEstimates}</span>
-            <span className="text-xs text-gray-400 block mt-1">Generated slips</span>
+            <span className="text-3xl font-black text-dezprox-primary">{totalEstimates}</span>
+            <span className="text-xs text-gray-400 block mt-1">Estimations generated</span>
           </div>
         </Card>
 
-        {/* Pending Enquiries */}
-        <Card className="p-5 flex flex-col justify-between">
+        {/* Pending Estimates */}
+        <Card className="p-5 flex flex-col justify-between border-gray-155 shadow-sm bg-white rounded-2xl">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pending Enquiries</span>
-            <div className="p-2 bg-amber-500/10 text-amber-500 rounded-xl">
-              <Clock className="w-4 h-4" />
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pending Review</span>
+            <div className="p-2 bg-amber-500/15 text-amber-600 rounded-xl">
+              <Clock className="w-4 h-4 text-amber-500" />
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-2xl font-black text-dezprox-primary">{pendingEnquiries}</span>
-            <span className="text-xs text-amber-600 font-bold block mt-1">Needs attention</span>
-          </div>
-        </Card>
-
-        {/* Completed Enquiries */}
-        <Card className="p-5 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Completed</span>
-            <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl">
-              <CheckCircle className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <span className="text-2xl font-black text-dezprox-primary">{completedEnquiries}</span>
-            <span className="text-xs text-emerald-600 font-bold block mt-1">Total resolved</span>
-          </div>
-        </Card>
-
-        {/* Revenue Overview */}
-        <Card className="p-5 flex flex-col justify-between bg-dezprox-primary text-white border-none shadow-card-hover">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-dezprox-accent uppercase tracking-wider">Est. Revenue</span>
-            <div className="p-2 bg-white/10 text-white rounded-xl">
-              <TrendingUp className="w-4 h-4 text-dezprox-accent" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <span className="text-xl font-black">{currency}{totalRevenue.toLocaleString()}</span>
-            <span className="text-[10px] text-white/50 block mt-1">Approved contracts</span>
+            <span className="text-3xl font-black text-dezprox-primary">{pendingEstimates}</span>
+            <span className="text-xs text-gray-400 block mt-1">Awaiting follow-up</span>
           </div>
         </Card>
       </div>
 
-      {/* Main Charts & Activity Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* SVG Area Chart */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle className="text-base font-bold text-dezprox-primary">Revenue & Estimates Trend</CardTitle>
-                <CardDescription className="text-xs">Estimate submissions activity over recent months</CardDescription>
-              </div>
-              <Badge variant="accent" className="text-[10px]">Live Data</Badge>
-            </div>
+        {/* Popular Services Section */}
+        <Card className="lg:col-span-1 border-gray-155 shadow-sm bg-white rounded-2xl">
+          <CardHeader className="p-6 pb-4">
+            <CardTitle className="text-base font-bold text-dezprox-primary flex items-center gap-2">
+              <Flame className="w-4 h-4 text-dezprox-accent" />
+              Popular Services
+            </CardTitle>
+            <CardDescription className="text-xs">Based on customer quotation choices</CardDescription>
           </CardHeader>
-          <CardContent className="h-64 flex items-end relative pt-4">
-            {/* Draw inline vector SVG chart to maintain high performance and look extremely custom */}
-            <svg className="w-full h-full" viewBox="0 0 500 200" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3FA740" stopOpacity="0.22" />
-                  <stop offset="100%" stopColor="#3FA740" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              {/* Grid Lines */}
-              <line x1="0" y1="50" x2="500" y2="50" stroke="#f1f5f9" strokeWidth="1" />
-              <line x1="0" y1="100" x2="500" y2="100" stroke="#f1f5f9" strokeWidth="1" />
-              <line x1="0" y1="150" x2="500" y2="150" stroke="#f1f5f9" strokeWidth="1" />
-              
-              {/* Chart Line path */}
-              <path
-                d="M 0 170 Q 100 130 180 140 T 360 80 T 500 40"
-                fill="none"
-                stroke="rgb(23, 26, 53)"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 0 170 Q 100 130 180 140 T 360 80 T 500 40 L 500 200 L 0 200 Z"
-                fill="url(#chartGradient)"
-              />
-              
-              {/* Highlight Nodes */}
-              <circle cx="180" cy="140" r="5" fill="#3FA740" stroke="white" strokeWidth="1.5" />
-              <circle cx="360" cy="80" r="5" fill="#3FA740" stroke="white" strokeWidth="1.5" />
-              <circle cx="500" cy="40" r="5" fill="#3FA740" stroke="white" strokeWidth="1.5" />
-            </svg>
-            
-            {/* Custom chart labels */}
-            <div className="absolute left-6 bottom-0 right-6 flex justify-between text-[10px] text-gray-400 font-bold font-sans">
-              <span>May</span>
-              <span>June</span>
-              <span>July (Current)</span>
+          <CardContent className="px-6 pb-6">
+            <div className="space-y-4">
+              {popularServices.map((srv, idx) => (
+                <div key={idx} className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0">
+                  <div>
+                    <span className="font-bold text-xs text-dezprox-primary block">{srv.name}</span>
+                    <span className="text-[10px] text-gray-400 font-semibold uppercase mt-0.5 block">{srv.category}</span>
+                  </div>
+                  <Badge variant="outline" className="font-extrabold text-[10px] text-dezprox-primary px-2.5 py-0.5 border-gray-200">
+                    {srv.count} Call{srv.count === 1 ? "" : "s"}
+                  </Badge>
+                </div>
+              ))}
+              {popularServices.length === 0 && (
+                <div className="text-center text-xs text-gray-400 italic py-6">No estimations logged yet.</div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Recent Activity List */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-base font-bold text-dezprox-primary">Recent Action Feed</CardTitle>
-            <CardDescription className="text-xs">Latest platform transactions logs</CardDescription>
+        {/* Recent Estimates List */}
+        <Card className="lg:col-span-2 border-gray-155 shadow-sm bg-white rounded-2xl">
+          <CardHeader className="p-6 pb-4">
+            <CardTitle className="text-base font-bold text-dezprox-primary">Recent Estimates & Customer Leads</CardTitle>
+            <CardDescription className="text-xs">Latest pricing calculations and inbound proposals</CardDescription>
           </CardHeader>
-          <CardContent className="p-6 pt-0">
-            {recentActivities.length === 0 ? (
-              <div className="text-center text-gray-400 py-8 text-xs">No recent actions logged.</div>
-            ) : (
-              <div className="space-y-4">
-                {recentActivities.map((act) => (
-                  <div key={act.id} className="flex items-start space-x-3 text-xs">
-                    <div className={`p-1.5 rounded-lg mt-0.5 ${
-                      act.type === "estimate" ? "bg-indigo-50 text-indigo-500" : "bg-emerald-50 text-emerald-500"
-                    }`}>
-                      {act.type === "estimate" ? <FileText className="w-3.5 h-3.5" /> : <HelpCircle className="w-3.5 h-3.5" />}
+          <CardContent className="px-6 pb-6">
+            <div className="space-y-4">
+              {recentEstimates.map((est) => (
+                <div key={est.id} className="flex items-start justify-between text-xs border-b border-gray-50 pb-3 last:border-0 last:pb-0">
+                  <div className="min-w-0 pr-4">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-dezprox-primary leading-tight truncate">{est.customerName}</p>
+                      {est.customerCompany && (
+                        <span className="text-[9px] bg-gray-50 border border-gray-150 px-1 rounded text-gray-500 font-bold">
+                          {est.customerCompany}
+                        </span>
+                      )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-dezprox-primary leading-tight truncate">{act.title}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5 truncate">{act.detail}</p>
-                      <span className="text-[9px] text-gray-400 mt-1 block font-bold">
-                        {act.date.toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                    </div>
-                    <Badge variant="secondary" className="text-[9px] capitalize px-1.5 py-0">
-                      {act.status}
-                    </Badge>
+                    <p className="text-[10px] text-gray-400 mt-1 block truncate">
+                      {est.serviceNames.join(", ")}
+                    </p>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="text-right shrink-0">
+                    <span className="font-black text-dezprox-primary block">
+                      {currency}{Math.round(est.totalPrice).toLocaleString()}
+                    </span>
+                    <span className="text-[9px] text-gray-400 block font-bold mt-1">
+                      {new Date(est.createdDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {recentEstimates.length === 0 && (
+                <div className="text-center text-xs text-gray-400 italic py-6">No estimates generated yet.</div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

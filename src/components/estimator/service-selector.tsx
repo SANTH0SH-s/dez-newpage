@@ -100,26 +100,36 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
                 hoverable
                 selected={isSelected}
                 onClick={() => handleToggle(service.id)}
-                className="relative overflow-hidden cursor-pointer h-full"
+                className="relative overflow-hidden cursor-pointer h-full flex flex-col"
               >
                 {/* Highlight Bar for Selection */}
                 <div 
                   className={twMerge(
-                     "absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300",
+                     "absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300 z-10",
                      isSelected ? "bg-dezprox-accent" : "bg-transparent"
                   )}
                 />
 
-                <CardHeader className="flex flex-row items-start space-x-4 p-6 pb-2">
+                {service.cardImage && (
+                  <div className="w-full h-32 overflow-hidden border-b border-gray-100 shrink-0">
+                    <img src={service.cardImage} alt={service.name} className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" />
+                  </div>
+                )}
+
+                <CardHeader className="flex flex-row items-start space-x-4 p-6 pb-2 relative">
                   <div 
                     className={twMerge(
-                      "p-3 rounded-xl transition-all duration-300",
+                      "p-3 rounded-xl transition-all duration-300 shrink-0",
                       isSelected 
                         ? "bg-dezprox-accent/15 text-dezprox-primary" 
                         : "bg-gray-50 text-gray-500 group-hover:bg-gray-100"
                     )}
                   >
-                    <IconComponent className="w-6 h-6" />
+                    {service.iconImage ? (
+                      <img src={service.iconImage} alt={service.name} className="w-6 h-6 object-contain" />
+                    ) : (
+                      <IconComponent className="w-6 h-6" />
+                    )}
                   </div>
                   
                   <div className="flex-1 min-w-0 pr-6">
@@ -138,7 +148,7 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
                   )}
                 </CardHeader>
 
-                <CardContent className="p-6 pt-2 font-sans text-sm text-dezprox-text/60 leading-relaxed">
+                 <CardContent className="p-6 pt-2 font-sans text-sm text-dezprox-text/60 leading-relaxed">
                   {service.description}
                 </CardContent>
               </Card>

@@ -13,15 +13,14 @@ import { ProgressStepper } from "@/components/ui/progress-stepper";
 import { ShieldCheck, ArrowRight, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { addEnquiry, addEstimate, getGlobalSettings, getServices, initDb } from "@/utils/db";
+import { addEstimate, getGlobalSettings, getServices, initDb } from "@/utils/db";
 import { calculateProjectCosts } from "@/utils/pricingCalculator";
 
 const FLOW_STEPS = [
   "Choose Services",
   "Configure Options",
   "Review Estimate",
-  "Contact Info",
-  "Complete"
+  "Get Proposal"
 ];
 
 export default function Home() {
@@ -75,25 +74,18 @@ export default function Home() {
     const rangeText = `${currency}${result.estimatedMin.toLocaleString()} - ${currency}${result.estimatedMax.toLocaleString()}`;
 
     // Add to DB
-    addEnquiry({
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      company: data.company,
-      selectedServices: selectedServiceIds,
-      estimateRange: rangeText,
-      message: data.notes,
-      status: "pending"
-    });
-
     addEstimate({
       customerName: data.name,
       customerEmail: data.email,
+      customerPhone: data.phone,
+      customerCompany: data.company,
+      notes: data.notes,
       serviceNames: serviceNames,
       totalPrice: result.finalCost,
       status: "pending",
       breakdown: result,
-      answers: answers
+      answers: answers,
+      estimateRange: rangeText
     });
 
     setCurrentStep(5);
@@ -118,7 +110,7 @@ export default function Home() {
   const stepperIndex = currentStep > 0 ? currentStep - 1 : -1;
 
   return (
-    <div className="flex flex-col min-h-screen bg-white relative overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-white relative">
       {/* Premium Animated SaaS-Style Background */}
       <PremiumBackground currentStep={currentStep} />
 
@@ -146,7 +138,7 @@ export default function Home() {
       {/* Main Flow Orchestrator */}
       <main className="flex-1 w-full flex flex-col items-center relative z-10">
         {/* Stepper container (Shown when not on Hero or Success Page) */}
-        {currentStep > 0 && currentStep < 5 && (
+        {currentStep > 0 && currentStep < 4 && (
           <div className="w-full max-w-[1280px] mx-auto pt-10 pb-6 print:hidden">
             <ProgressStepper 
               steps={FLOW_STEPS} 
@@ -192,31 +184,45 @@ export default function Home() {
             {currentStep === 2 && (
               <motion.div
                 key="form"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
                 className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-start px-4"
               >
                 {/* Form Questionnaire (Left Column) */}
                 <div className="lg:col-span-2">
-                  <DynamicForm
-                    selectedServiceIds={selectedServiceIds}
-                    answers={answers}
-                    onAnswerChange={handleAnswerChange}
-                    onBack={handleBackToSelector}
-                    onNext={handleNextFromForm}
-                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <DynamicForm
+                      selectedServiceIds={selectedServiceIds}
+                      answers={answers}
+                      onAnswerChange={handleAnswerChange}
+                      onBack={handleBackToSelector}
+                      onNext={handleNextFromForm}
+                    />
+                  </motion.div>
                 </div>
 
                 {/* Live Sidebar Calculator Widget (Right Column) */}
-                <div className="lg:col-span-1 py-8 hidden lg:block">
-                  <PriceSummary
-                    selectedServiceIds={selectedServiceIds}
-                    answers={answers}
-                    sidebarMode={true}
-                    projectModifiers={projectModifiers}
-                  />
+                <div className="lg:col-span-1 py-8 hidden lg:block sticky top-24 self-start">
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <PriceSummary
+                      selectedServiceIds={selectedServiceIds}
+                      answers={answers}
+                      sidebarMode={true}
+                      projectModifiers={projectModifiers}
+                    />
+                  </motion.div>
                 </div>
               </motion.div>
             )}
@@ -237,31 +243,13 @@ export default function Home() {
                   onNext={handleNextFromSummary}
                   sidebarMode={false}
                   projectModifiers={projectModifiers}
+                  contactData={contactData}
+                  onContactSave={(data) => setContactData(data)}
                 />
               </motion.div>
             )}
 
-            {currentStep === 4 && (
-              <motion.div
-                key="contact"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.3 }}
-                className="w-full"
-              >
-                <ContactForm
-                  selectedServiceIds={selectedServiceIds}
-                  answers={answers}
-                  onSubmit={handleContactSubmit}
-                  onBack={handleBackToSummary}
-                  projectModifiers={projectModifiers}
-                  onModifierChange={handleModifierChange}
-                />
-              </motion.div>
-            )}
-
-            {currentStep === 5 && contactData && (
+             {currentStep === 4 && (
               <motion.div
                 key="success"
                 initial={{ opacity: 0, scale: 0.98 }}
@@ -275,12 +263,26 @@ export default function Home() {
                   answers={answers}
                   contactData={contactData}
                   onReset={handleReset}
+                  onBack={() => setCurrentStep(3)}
                   projectModifiers={projectModifiers}
+                  onContactSave={(data) => setContactData(data)}
                 />
               </motion.div>
             )}
           </AnimatePresence>
         </div>
+
+        {currentStep > 0 && currentStep < 4 && (
+          <div className="lg:hidden print:hidden">
+            <PriceSummary
+              selectedServiceIds={selectedServiceIds}
+              answers={answers}
+              sidebarMode={true}
+              projectModifiers={projectModifiers}
+              isMobileSheet={true}
+            />
+          </div>
+        )}
       </main>
 
       {/* Footer Info */}

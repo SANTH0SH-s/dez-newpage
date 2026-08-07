@@ -25,7 +25,7 @@ export default function GlobalSettingsView() {
     setSettings({
       ...settings,
       [field]: field === "taxRate" || field === "discountRate" || field === "minimumCost" || field === "maximumCost" 
-        ? parseFloat(value) || 0 
+        ? (value === "" ? "" : value)
         : value
     });
   };
@@ -34,7 +34,16 @@ export default function GlobalSettingsView() {
     e.preventDefault();
     if (!settings) return;
 
-    saveGlobalSettings(settings);
+    const cleanedSettings: GlobalSettings = {
+      ...settings,
+      taxRate: parseFloat(settings.taxRate as any) || 0,
+      discountRate: parseFloat(settings.discountRate as any) || 0,
+      minimumCost: parseFloat(settings.minimumCost as any) || 0,
+      maximumCost: parseFloat(settings.maximumCost as any) || 0,
+    };
+
+    saveGlobalSettings(cleanedSettings);
+    setSettings(cleanedSettings);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
   };
@@ -49,6 +58,7 @@ export default function GlobalSettingsView() {
         defaultPricingMode: "Standard Additive",
         minimumCost: 500,
         maximumCost: 100000,
+        gateEstimateWithLeadForm: false,
       };
       setSettings(defaults);
       saveGlobalSettings(defaults);
@@ -121,6 +131,37 @@ export default function GlobalSettingsView() {
                   value={settings.defaultPricingMode}
                   onChange={(e) => handleInputChange("defaultPricingMode", e.target.value)}
                 />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">WhatsApp Contact Number</label>
+                <Input
+                  placeholder="e.g. +15550199000"
+                  value={settings.whatsappNumber || ""}
+                  onChange={(e) => handleInputChange("whatsappNumber", e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1 pt-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Lead Gate Protection</label>
+                <div className="flex items-center space-x-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange("gateEstimateWithLeadForm", !settings.gateEstimateWithLeadForm)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-205 ease-in-out focus:outline-none ${
+                      settings.gateEstimateWithLeadForm ? "bg-dezprox-primary" : "bg-gray-200"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-205 ease-in-out ${
+                        settings.gateEstimateWithLeadForm ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                  <span className="text-xs font-bold text-gray-650">
+                    {settings.gateEstimateWithLeadForm ? "Enabled (Blur details & request lead info)" : "Disabled"}
+                  </span>
+                </div>
               </div>
             </CardContent>
           </Card>

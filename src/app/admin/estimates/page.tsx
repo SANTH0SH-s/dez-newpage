@@ -123,6 +123,8 @@ export default function EstimateManagement() {
                     <td className="p-4">
                       <span className="font-bold text-dezprox-primary block">{est.customerName}</span>
                       <span className="text-xs text-gray-400 block">{est.customerEmail}</span>
+                      {est.customerPhone && <span className="text-[10px] text-gray-400 block">{est.customerPhone}</span>}
+                      {est.customerCompany && <span className="text-[10px] bg-gray-50 border border-gray-150 px-1.5 py-0.5 rounded text-gray-500 font-semibold inline-block mt-0.5">{est.customerCompany}</span>}
                     </td>
                     <td className="p-4">
                       <div className="flex flex-wrap gap-1">
@@ -208,6 +210,24 @@ export default function EstimateManagement() {
                   <span className="text-gray-400 block font-semibold">Customer Email</span>
                   <span className="font-bold text-dezprox-primary text-sm">{viewingEstimate.customerEmail}</span>
                 </div>
+                {viewingEstimate.customerPhone && (
+                  <div>
+                    <span className="text-gray-400 block font-semibold">Customer Phone</span>
+                    <span className="font-bold text-dezprox-primary text-sm">{viewingEstimate.customerPhone}</span>
+                  </div>
+                )}
+                {viewingEstimate.customerCompany && (
+                  <div>
+                    <span className="text-gray-400 block font-semibold">Company</span>
+                    <span className="font-bold text-dezprox-primary text-sm">{viewingEstimate.customerCompany}</span>
+                  </div>
+                )}
+                {viewingEstimate.estimateRange && (
+                  <div>
+                    <span className="text-gray-400 block font-semibold">Estimate Range</span>
+                    <span className="font-bold text-dezprox-primary text-sm">{viewingEstimate.estimateRange}</span>
+                  </div>
+                )}
                 <div>
                   <span className="text-gray-400 block font-semibold">Generated Date</span>
                   <span className="font-bold text-dezprox-primary">
@@ -274,6 +294,75 @@ export default function EstimateManagement() {
                   </button>
                 </div>
               </div>
+
+              {/* Customer Notes / Messages */}
+              {viewingEstimate.notes && (
+                <div className="space-y-2">
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Customer Notes</span>
+                  <div className="border border-gray-100 p-4 rounded-xl bg-slate-50/20 text-xs text-dezprox-primary font-normal leading-relaxed">
+                    {viewingEstimate.notes}
+                  </div>
+                </div>
+              )}
+
+              {/* Questionnaire Answers */}
+              {viewingEstimate.answers && Object.keys(viewingEstimate.answers).length > 0 && (
+                <div className="space-y-3">
+                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Questionnaire Responses</span>
+                  <div className="border border-gray-100 rounded-xl divide-y divide-gray-100 overflow-hidden bg-white">
+                    {Object.entries(viewingEstimate.answers).map(([serviceId, serviceAnswers]: [string, any]) => {
+                      if (!serviceAnswers || Object.keys(serviceAnswers).length === 0) return null;
+                      
+                      return (
+                        <div key={serviceId} className="p-4 space-y-2">
+                          <span className="font-bold text-xs text-dezprox-accent uppercase tracking-wider block">
+                            Service ID: {serviceId}
+                          </span>
+                          <div className="space-y-2">
+                            {Object.entries(serviceAnswers).map(([qId, val]: [string, any]) => {
+                              if (qId === "selected-package") {
+                                return (
+                                  <div key={qId} className="text-xs">
+                                    <span className="text-gray-400 font-semibold mr-1.5">Selected Package Tier:</span>
+                                    <span className="font-bold text-dezprox-primary">{String(val)}</span>
+                                  </div>
+                                );
+                              }
+                              if (qId === "pricing-components") {
+                                return (
+                                  <div key={qId} className="text-xs">
+                                    <span className="text-gray-400 font-semibold mr-1.5">Selected Add-on IDs:</span>
+                                    <span className="font-bold text-dezprox-primary">{Array.isArray(val) ? val.join(", ") : String(val)}</span>
+                                  </div>
+                                );
+                              }
+                              if (qId === "pricing-component-units") {
+                                return null; // Displayed elsewhere or omitted for clean presentation
+                              }
+                              
+                              let displayVal = "";
+                              if (Array.isArray(val)) {
+                                displayVal = val.join(", ");
+                              } else if (typeof val === "boolean") {
+                                displayVal = val ? "Yes" : "No";
+                              } else {
+                                displayVal = String(val);
+                              }
+
+                              return (
+                                <div key={qId} className="text-xs flex flex-col md:flex-row md:justify-between border-b border-gray-50/50 pb-1 last:border-0 last:pb-0">
+                                  <span className="text-gray-500 font-medium">{qId}:</span>
+                                  <span className="font-bold text-dezprox-primary text-right">{displayVal}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Itemized breakdown (if dynamic calculate breakdown exists) */}
               {viewingEstimate.breakdown?.services && (

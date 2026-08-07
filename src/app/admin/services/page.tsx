@@ -32,6 +32,21 @@ export default function ServiceManagement() {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingService, setEditingService] = useState<Partial<Service> | null>(null);
 
+  const handleFileChange = (field: "iconImage" | "cardImage" | "heroBanner" | "thumbnail", file: File | null) => {
+    if (!file || !editingService) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setEditingService(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          [field]: reader.result as string
+        };
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
   useEffect(() => {
     setServices(getServices());
     setCurrency(getGlobalSettings().currency);
@@ -281,6 +296,61 @@ export default function ServiceManagement() {
                   value={editingService.iconName || "Globe"}
                   onChange={(e) => setEditingService({ ...editingService, iconName: e.target.value })}
                 />
+              </div>
+
+              {/* Asset Uploads */}
+              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-150">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-gray-550 block">Card Icon Image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileChange("iconImage", e.target.files?.[0] || null)}
+                    className="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-dezprox-accent/15 file:text-dezprox-primary hover:file:bg-dezprox-accent/25 cursor-pointer block w-full"
+                  />
+                  {editingService.iconImage && (
+                    <img src={editingService.iconImage} alt="Icon Preview" className="h-6 object-contain border rounded p-0.5 bg-white mt-1" />
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-gray-550 block">Card Image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileChange("cardImage", e.target.files?.[0] || null)}
+                    className="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-dezprox-accent/15 file:text-dezprox-primary hover:file:bg-dezprox-accent/25 cursor-pointer block w-full"
+                  />
+                  {editingService.cardImage && (
+                    <img src={editingService.cardImage} alt="Card Preview" className="h-6 object-contain border rounded p-0.5 bg-white mt-1" />
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-gray-550 block">Hero Banner</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileChange("heroBanner", e.target.files?.[0] || null)}
+                    className="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-dezprox-accent/15 file:text-dezprox-primary hover:file:bg-dezprox-accent/25 cursor-pointer block w-full"
+                  />
+                  {editingService.heroBanner && (
+                    <img src={editingService.heroBanner} alt="Hero Preview" className="h-6 object-contain border rounded p-0.5 bg-white mt-1" />
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-gray-550 block">Thumbnail</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileChange("thumbnail", e.target.files?.[0] || null)}
+                    className="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-dezprox-accent/15 file:text-dezprox-primary hover:file:bg-dezprox-accent/25 cursor-pointer block w-full"
+                  />
+                  {editingService.thumbnail && (
+                    <img src={editingService.thumbnail} alt="Thumbnail Preview" className="h-6 object-contain border rounded p-0.5 bg-white mt-1" />
+                  )}
+                </div>
               </div>
 
               {/* Description */}
