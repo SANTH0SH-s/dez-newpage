@@ -13,7 +13,7 @@ import {
   getGlobalSettings,
   Service,
   PricingComponent 
-} from "@/utils/db";
+} from "@/lib/db";
 import { Plus, Edit, Trash2, Copy, X, Save, PlusCircle, Sparkles } from "lucide-react";
 import * as Icons from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";

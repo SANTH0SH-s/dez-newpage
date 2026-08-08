@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Check, ArrowRight } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import { motion, Variants } from "framer-motion";
-import { getServices, getGlobalSettings, Service } from "@/utils/db";
+import { getServices, getGlobalSettings, Service } from "@/lib/db";
 
 const containerVariants: Variants = {
   hidden: {},
@@ -58,7 +58,6 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
 
   return (
     <div className="w-full max-w-[1280px] mx-auto px-4 py-8">
-      {/* Header Info */}
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
         <div>
           <h2 className="text-2xl font-bold font-sans text-dezprox-primary">
@@ -79,7 +78,6 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
         )}
       </div>
 
-      {/* Services Cards Grid */}
       <motion.div 
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         variants={containerVariants}
@@ -102,7 +100,6 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
                 onClick={() => handleToggle(service.id)}
                 className="relative overflow-hidden cursor-pointer h-full flex flex-col"
               >
-                {/* Highlight Bar for Selection */}
                 <div 
                   className={twMerge(
                      "absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300 z-10",
@@ -136,9 +133,11 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
                     <CardTitle className="text-lg font-bold font-sans text-dezprox-primary truncate">
                       {service.name}
                     </CardTitle>
-                    <span className="text-xs font-sans text-dezprox-text/50 font-bold block mt-0.5">
-                      Starts at {currency}{service.basePrice.toLocaleString()}
-                    </span>
+                    {service.basePrice > 0 && (
+                      <span className="text-xs font-sans text-dezprox-text/50 font-bold block mt-0.5">
+                        Starts at {currency}{service.basePrice.toLocaleString()}
+                      </span>
+                    )}
                   </div>
 
                   {isSelected && (
@@ -157,7 +156,6 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
         })}
       </motion.div>
 
-      {/* Form Action Footer */}
       <div className="mt-12 flex justify-center md:justify-end border-t border-gray-100 pt-8">
         <Button
           variant={selectedServiceIds.length > 0 ? "accent" : "outline"}

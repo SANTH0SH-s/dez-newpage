@@ -215,7 +215,7 @@ const isClient = typeof window !== "undefined";
 export const initDb = () => {
   if (!isClient) return;
 
-  const currentDbVersion = "db_v13";
+  const currentDbVersion = "db_v16";
   const storedVersion = localStorage.getItem("dezprox_db_version");
 
   if (storedVersion !== currentDbVersion) {
@@ -284,7 +284,7 @@ export const initDb = () => {
             name: "No-Code Website", 
             price: 11999, 
             timeline: "1 Week", 
-            description: "Standard website (4 pages, SEO, content). Note: The price mentioned is only for Development and Deployment. Platform fee has to be paid to the platform directly.", 
+            description: "Standard website (4 pages, SEO, content).", 
             isRecommended: false, 
             isPopular: false, 
             displayOrder: 2, 
@@ -318,7 +318,7 @@ export const initDb = () => {
           { id: "ecom-basic", name: "Code Basic", price: 50000, timeline: "2-4 Weeks", description: "Standard storefront package. Includes payment verification and delivery booking setup.", isRecommended: false, isPopular: false, displayOrder: 0, status: "active", features: ["Product Listing + Cart + Checkout", "UPI/QR Manual Payment", "Delhivery Manual Tracking", "Basic Product Variants"] },
           { id: "ecom-std", name: "Code Standard", price: 90000, timeline: "5-7 Weeks", description: "Automated payment and carrier integration for growing stores.", isRecommended: true, isPopular: true, displayOrder: 1, status: "active", features: ["Everything in Basic", "Razorpay/Cashfree Gateway", "WhatsApp Integration", "Semi-auto Shiprocket Courier"] },
           { id: "ecom-prem", name: "Code Premium", price: 120000, timeline: "8-10 Weeks", description: "Advanced storefront with full dashboard and real-time carrier automations.", isRecommended: false, isPopular: false, displayOrder: 2, status: "active", features: ["Everything in Standard", "Full Payment Webhooks", "Shiprocket Full Auto Pickup", "Advanced Variant & Search Filter"] },
-          { id: "ecom-nocode", name: "No-Code E-Commerce", price: 30000, timeline: "1-2 Weeks", description: "No-Code storefront setup. Note: Price is exclusive of platform and subscription fees. Includes Basic SEO and Website Content.", isRecommended: false, isPopular: false, displayOrder: 3, status: "active", features: ["Basic SEO", "Website Content"] }
+          { id: "ecom-nocode", name: "No-Code E-Commerce", price: 30000, timeline: "1-2 Weeks", description: "No-Code storefront setup. Includes Basic SEO and Website Content.", isRecommended: false, isPopular: false, displayOrder: 3, status: "active", features: ["Basic SEO", "Website Content"] }
         );
       } else if (s.id === "branding") {
         packages.push(

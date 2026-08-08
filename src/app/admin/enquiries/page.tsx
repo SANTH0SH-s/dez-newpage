@@ -12,7 +12,7 @@ import {
   getServices,
   getGlobalSettings,
   Enquiry 
-} from "@/utils/db";
+} from "@/lib/db";
 import { Search, Trash2, Eye, X, Phone, Mail, Building, Check, Clock } from "lucide-react";
 
 export default function CustomerEnquiries() {

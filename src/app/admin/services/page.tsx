@@ -12,7 +12,7 @@ import {
   saveServices, 
   getGlobalSettings,
   Service 
-} from "@/utils/db";
+} from "@/lib/db";
 import { getIcon } from "@/data/servicesData";
 import { 
   Plus, 

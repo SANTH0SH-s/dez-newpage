@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { calculateProjectCosts } from "@/utils/pricingCalculator";
+import { calculateProjectCosts } from "@/lib/pricingCalculator";
 import { ArrowLeft, Send } from "lucide-react";
-import { getGlobalSettings } from "@/utils/db";
+import { getGlobalSettings } from "@/lib/db";
 
 interface ContactFormProps {
   selectedServiceIds: string[];
@@ -99,18 +99,14 @@ export const ContactForm = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Contact Details Form */}
         <form onSubmit={handleSubmit} className="lg:col-span-2 space-y-6">
           <Card className="border-gray-100/70 p-6">
             <CardContent className="p-0 space-y-5">
-              
-              {/* Project Preferences (Modifiers) */}
               <div>
                 <h3 className="text-xs font-bold text-dezprox-primary uppercase tracking-widest mb-4 border-b border-gray-100 pb-2">
                   Project Preferences & Multipliers
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Complexity */}
                   <div className="space-y-1">
                     <label htmlFor="complexity" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
                       Expected Complexity
@@ -127,7 +123,6 @@ export const ContactForm = ({
                     />
                   </div>
 
-                  {/* Urgency */}
                   <div className="space-y-1">
                     <label htmlFor="urgency" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
                       Delivery Urgency
@@ -144,7 +139,6 @@ export const ContactForm = ({
                     />
                   </div>
 
-                  {/* Quality */}
                   <div className="space-y-1">
                     <label htmlFor="quality" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
                       Quality Standard
@@ -163,14 +157,12 @@ export const ContactForm = ({
                 </div>
               </div>
 
-              {/* Personal Details */}
               <div className="pt-4">
                 <h3 className="text-xs font-bold text-dezprox-primary uppercase tracking-widest mb-4 border-b border-gray-100 pb-2">
                   Your Contact Information
                 </h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Full Name */}
                   <div className="space-y-1">
                     <label htmlFor="name" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
                       Full Name *
@@ -186,7 +178,6 @@ export const ContactForm = ({
                     {errors.name && <span className="text-xs text-red-500">{errors.name}</span>}
                   </div>
 
-                  {/* Email Address */}
                   <div className="space-y-1">
                     <label htmlFor="email" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
                       Email Address *
@@ -205,7 +196,6 @@ export const ContactForm = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  {/* Phone Number */}
                   <div className="space-y-1">
                     <label htmlFor="phone" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
                       Phone Number *
@@ -221,7 +211,6 @@ export const ContactForm = ({
                     {errors.phone && <span className="text-xs text-red-500">{errors.phone}</span>}
                   </div>
 
-                  {/* Company Name */}
                   <div className="space-y-1">
                     <label htmlFor="company" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
                       Company Name
@@ -237,7 +226,6 @@ export const ContactForm = ({
                 </div>
               </div>
 
-              {/* Notes */}
               <div className="space-y-1">
                 <label htmlFor="notes" className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
                   Project Notes & Details
@@ -253,7 +241,6 @@ export const ContactForm = ({
             </CardContent>
           </Card>
 
-          {/* Form Actions */}
           <div className="flex items-center justify-between border-t border-gray-100 pt-6 gap-4">
             <Button
               type="button"
@@ -274,7 +261,6 @@ export const ContactForm = ({
           </div>
         </form>
 
-        {/* Selected Specifications Panel */}
         <div className="lg:col-span-1">
           <Card className="border-gray-100/70 p-6 bg-gray-50/20">
             <CardContent className="p-0 space-y-6">

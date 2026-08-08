@@ -9,7 +9,7 @@ import {
   getGlobalSettings, 
   saveGlobalSettings, 
   GlobalSettings 
-} from "@/utils/db";
+} from "@/lib/db";
 import { Save, Check, RefreshCw } from "lucide-react";
 
 export default function GlobalSettingsView() {

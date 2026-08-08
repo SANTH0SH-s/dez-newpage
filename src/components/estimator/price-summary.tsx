@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { calculateProjectCosts, TotalCalculationResult } from "@/utils/pricingCalculator";
+import { calculateProjectCosts, TotalCalculationResult } from "@/lib/pricingCalculator";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ChevronUp, ChevronDown, X, ArrowLeft, ArrowRight } from "lucide-react";
-import { getGlobalSettings, GlobalSettings, addEstimate } from "@/utils/db";
+import { getGlobalSettings, GlobalSettings, addEstimate } from "@/lib/db";
 import { motion, AnimatePresence } from "framer-motion";
 import { twMerge } from "tailwind-merge";
 

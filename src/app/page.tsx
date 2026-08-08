@@ -13,8 +13,8 @@ import { ProgressStepper } from "@/components/ui/progress-stepper";
 import { ShieldCheck, ArrowRight, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { addEstimate, getGlobalSettings, getServices, initDb } from "@/utils/db";
-import { calculateProjectCosts } from "@/utils/pricingCalculator";
+import { addEstimate, getGlobalSettings, getServices, initDb } from "@/lib/db";
+import { calculateProjectCosts } from "@/lib/pricingCalculator";
 
 const FLOW_STEPS = [
   "Choose Services",

@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { calculateProjectCosts } from "@/utils/pricingCalculator";
+import { calculateProjectCosts } from "@/lib/pricingCalculator";
 import { ContactData } from "./contact-form";
 import { 
   Check, 
@@ -28,7 +28,7 @@ import {
   Clock,
   Coins
 } from "lucide-react";
-import { getGlobalSettings, addEstimate } from "@/utils/db";
+import { getGlobalSettings, addEstimate } from "@/lib/db";
 import { motion, AnimatePresence } from "framer-motion";
 import * as Icons from "lucide-react";
 

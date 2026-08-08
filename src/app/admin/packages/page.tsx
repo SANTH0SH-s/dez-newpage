@@ -13,7 +13,7 @@ import {
   getGlobalSettings,
   Service,
   Package 
-} from "@/utils/db";
+} from "@/lib/db";
 import { Plus, Edit, Trash2, Copy, X, Save, Layers, GripVertical, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 

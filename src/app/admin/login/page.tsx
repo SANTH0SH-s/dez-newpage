@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DezproxLogo } from "@/components/ui/logo";
-import { loginAdmin, getCurrentSession } from "@/utils/db";
+import { loginAdmin, getCurrentSession } from "@/lib/db";
 import { Lock, Mail, ArrowRight, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
 

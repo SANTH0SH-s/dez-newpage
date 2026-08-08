@@ -12,7 +12,7 @@ import {
   updateEstimateStatus, 
   getGlobalSettings,
   Estimate 
-} from "@/utils/db";
+} from "@/lib/db";
 import { Search, Trash2, Eye, X, Check, XCircle, RefreshCw } from "lucide-react";
 
 export default function EstimateManagement() {

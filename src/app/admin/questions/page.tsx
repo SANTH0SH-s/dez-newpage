@@ -15,7 +15,7 @@ import {
   Package,
   Question,
   QuestionOption
-} from "@/utils/db";
+} from "@/lib/db";
 import { Plus, Edit, Trash2, Copy, X, Save, HelpCircle, GripVertical, Settings2, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 

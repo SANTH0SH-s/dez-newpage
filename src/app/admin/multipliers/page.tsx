@@ -9,7 +9,7 @@ import {
   saveMultipliers, 
   MultiplierSet,
   Multiplier
-} from "@/utils/db";
+} from "@/lib/db";
 import { Save, AlertCircle } from "lucide-react";
 
 export default function MultiplierManagement() {

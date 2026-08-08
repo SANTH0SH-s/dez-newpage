@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import * as Icons from "lucide-react";
 import { ArrowLeft, ArrowRight, Cog } from "lucide-react";
 import { twMerge } from "tailwind-merge";
-import { getServices, getGlobalSettings, Service, Question, PricingComponent } from "@/utils/db";
+import { getServices, getGlobalSettings, Service, Question, PricingComponent } from "@/lib/db";
 
 interface DynamicFormProps {
   selectedServiceIds: string[];
@@ -273,7 +273,7 @@ export const DynamicForm = ({
                         {/* Plan Headings Row */}
                         <tr className="bg-gray-50 border-b border-gray-150">
                           <th 
-                            className="py-3 px-3 font-black text-gray-400 uppercase tracking-wider text-[11px]"
+                            className="py-3.5 px-3 font-black text-gray-500 uppercase tracking-wider text-xs"
                             style={{ width: "24%" }}
                           >
                             Comparison Plan
@@ -285,7 +285,7 @@ export const DynamicForm = ({
                                 key={pkg.id} 
                                 onClick={() => onAnswerChange(service.id, "selected-package", pkg.id)}
                                 className={twMerge(
-                                  "py-3 px-2 text-center cursor-pointer select-none transition-all text-xs font-black",
+                                  "py-3.5 px-2 text-center cursor-pointer select-none transition-all text-sm font-black",
                                   isSelected ? "bg-dezprox-accent/5 text-dezprox-accent" : "text-dezprox-primary hover:bg-gray-50/50"
                                 )}
                                 style={{ width: `${76 / servicePackages.length}%` }}
@@ -303,9 +303,9 @@ export const DynamicForm = ({
                       <tbody>
                         {/* Price Row */}
                         <tr className="border-b border-gray-150">
-                          <td className="py-3 px-3 font-bold text-gray-500 uppercase tracking-wide text-[10px] break-words">Estimated Price</td>
+                          <td className="py-3.5 px-3 font-bold text-gray-500 uppercase tracking-wide text-xs break-words">Estimated Price</td>
                           {servicePackages.map((pkg: any) => (
-                            <td key={pkg.id} className={twMerge("py-3 px-2 text-center font-extrabold text-xs text-dezprox-primary break-words", selectedPackageId === pkg.id ? "bg-dezprox-accent/5" : "")}>
+                            <td key={pkg.id} className={twMerge("py-3.5 px-2 text-center font-extrabold text-sm text-dezprox-primary break-words", selectedPackageId === pkg.id ? "bg-dezprox-accent/5" : "")}>
                               {currency}{pkg.price.toLocaleString()}
                             </td>
                           ))}
@@ -314,9 +314,9 @@ export const DynamicForm = ({
                         {/* Default Page Count Row */}
                         {service.id === "website-dev" && (
                           <tr className="border-b border-gray-150">
-                            <td className="py-3 px-3 font-bold text-gray-500 uppercase tracking-wide text-[10px] break-words">Default Page Count</td>
+                            <td className="py-3.5 px-3 font-bold text-gray-500 uppercase tracking-wide text-xs break-words">Default Page Count</td>
                             {servicePackages.map((pkg: any) => (
-                              <td key={pkg.id} className={twMerge("py-3 px-2 text-center font-bold text-dezprox-primary break-words", selectedPackageId === pkg.id ? "bg-dezprox-accent/5" : "")}>
+                              <td key={pkg.id} className={twMerge("py-3.5 px-2 text-center font-bold text-xs text-dezprox-primary break-words", selectedPackageId === pkg.id ? "bg-dezprox-accent/5" : "")}>
                                 4 Pages
                               </td>
                             ))}
@@ -325,9 +325,9 @@ export const DynamicForm = ({
 
                         {/* Delivery Timeline row */}
                         <tr className="border-b border-gray-150">
-                          <td className="py-3 px-3 font-bold text-gray-500 uppercase tracking-wide text-[10px] break-words">Delivery Duration</td>
+                          <td className="py-3.5 px-3 font-bold text-gray-500 uppercase tracking-wide text-xs break-words">Delivery Duration</td>
                           {servicePackages.map((pkg: any) => (
-                            <td key={pkg.id} className={twMerge("py-3 px-2 text-center font-bold text-dezprox-primary break-words", selectedPackageId === pkg.id ? "bg-dezprox-accent/5" : "")}>
+                            <td key={pkg.id} className={twMerge("py-3.5 px-2 text-center font-bold text-xs text-dezprox-primary break-words", selectedPackageId === pkg.id ? "bg-dezprox-accent/5" : "")}>
                               {pkg.timeline}
                             </td>
                           ))}
@@ -335,15 +335,29 @@ export const DynamicForm = ({
 
                         {/* Description row */}
                         <tr className="border-b border-gray-150">
-                          <td className="py-3 px-3 font-bold text-gray-500 uppercase tracking-wide text-[10px] break-words">Tier Description</td>
+                          <td className="py-3.5 px-3 font-bold text-gray-500 uppercase tracking-wide text-xs break-words">Tier Description</td>
                           {servicePackages.map((pkg: any) => (
-                            <td key={pkg.id} className={twMerge("py-3 px-2 text-center text-dezprox-text/60 leading-normal font-normal text-[11px] break-words", selectedPackageId === pkg.id ? "bg-dezprox-accent/5" : "")}>
-                              {pkg.description}
+                            <td key={pkg.id} className={twMerge("py-3.5 px-2 text-center text-dezprox-text/80 leading-relaxed font-normal text-xs break-words", selectedPackageId === pkg.id ? "bg-dezprox-accent/5" : "")}>
+                              {(() => {
+                                const desc = (pkg.description || "").replace(/\s*Note:.*$/gi, "").trim();
+                                const parts = desc.split(/(\bwith\b|\bwithout\b)/i);
+                                return parts.map((part: string, idx: number) => {
+                                  const lower = part.toLowerCase();
+                                  if (lower === "with" || lower === "without") {
+                                    return (
+                                      <span key={idx} className="font-extrabold text-dezprox-primary">
+                                        {part}
+                                      </span>
+                                    );
+                                  }
+                                  return part;
+                                });
+                              })()}
                             </td>
                           ))}
                         </tr>
 
-                        {/* Important Notes row */}
+                        {/* Pricing Notes row */}
                         {(() => {
                           const hasNotes = servicePackages.some((pkg: any) => 
                             (service.id === "website-dev" && (pkg.id === "web-nocode" || pkg.id.includes("web-std") || pkg.id === "web-dyn")) ||
@@ -353,8 +367,8 @@ export const DynamicForm = ({
                           if (!hasNotes) return null;
 
                           return (
-                            <tr className="border-b border-gray-150 bg-amber-50/10">
-                              <td className="py-3 px-3 font-bold text-gray-500 uppercase tracking-wide text-[10px] break-words">Important Notes</td>
+                            <tr className="border-b border-gray-150 bg-amber-50/20">
+                              <td className="py-3.5 px-3 font-bold text-gray-500 uppercase tracking-wide text-xs break-words">Pricing Notes</td>
                               {servicePackages.map((pkg: any) => {
                                 let noteText = "";
                                 if (service.id === "website-dev") {
@@ -375,11 +389,27 @@ export const DynamicForm = ({
                                   <td 
                                     key={`note-${pkg.id}`} 
                                     className={twMerge(
-                                      "py-3 px-2 text-center text-amber-700 leading-normal font-semibold text-[10px] break-words", 
+                                      "py-3.5 px-2 text-center text-amber-900 leading-normal font-semibold text-xs break-words", 
                                       isSelected ? "bg-dezprox-accent/5" : ""
                                     )}
                                   >
-                                    {noteText || "-"}
+                                    {noteText ? (
+                                      noteText.split(/(₹[\d,]+|Rs\.?\s*[\d,]+)/g).map((part: string, idx: number) => {
+                                        if (/^(₹|Rs)/i.test(part)) {
+                                          return (
+                                            <span 
+                                              key={idx} 
+                                              className="font-black text-indigo-600"
+                                            >
+                                              {part}
+                                            </span>
+                                          );
+                                        }
+                                        return part;
+                                      })
+                                    ) : (
+                                      "-"
+                                    )}
                                   </td>
                                 );
                               })}
@@ -395,7 +425,7 @@ export const DynamicForm = ({
                           
                           return allUniqueFeatures.map((feat) => (
                             <tr key={feat} className="border-b border-gray-150 hover:bg-gray-50/20">
-                              <td className="py-2.5 px-3 font-semibold text-dezprox-text text-[11px] leading-tight break-words">{feat}</td>
+                              <td className="py-3 px-3 font-semibold text-dezprox-text text-xs leading-snug break-words">{feat}</td>
                               {servicePackages.map((pkg: any) => {
                                 const hasFeature = pkg.features?.includes(feat);
                                 const isSelected = selectedPackageId === pkg.id;
@@ -403,7 +433,7 @@ export const DynamicForm = ({
                                   <td 
                                     key={pkg.id} 
                                     className={twMerge(
-                                      "py-2.5 px-2 text-center",
+                                      "py-3 px-2 text-center",
                                       isSelected ? "bg-dezprox-accent/5" : ""
                                     )}
                                   >

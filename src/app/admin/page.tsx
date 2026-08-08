@@ -18,7 +18,7 @@ import {
   getGlobalSettings,
   Service,
   Estimate
-} from "@/utils/db";
+} from "@/lib/db";
 
 export default function AdminDashboard() {
   const [services, setServices] = useState<Service[]>([]);

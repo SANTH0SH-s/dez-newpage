@@ -1,6 +1,7 @@
 {
-  "name": "example",
+  "name": "dezprox-estimator-platform",
   "version": "0.1.0",
+  "description": "Interactive project cost estimation and CMS management platform",
   "private": true,
   "scripts": {
     "dev": "next dev",

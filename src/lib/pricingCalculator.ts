@@ -1,4 +1,4 @@
-import { getServices, getMultipliers, getGlobalSettings } from "@/utils/db";
+import { getServices, getMultipliers, getGlobalSettings } from "@/lib/db";
 
 export interface CostBreakdownItem {
   id: string;

@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, ArrowLeft, LogOut } from "lucide-react";
-import { logoutAdmin } from "@/utils/db";
+import { logoutAdmin } from "@/lib/db";
 
 export default function UnauthorizedPage() {
   const router = useRouter();

@@ -70,7 +70,7 @@ export const SERVICES_DATA: Service[] = [
     name: "Digital Marketing",
     description: "High-yield lead generation, paid acquisition campaigns, and strategic content planning.",
     iconName: "Megaphone",
-    basePrice: 0,
+    basePrice: 999,
     questions: []
   },
   {
