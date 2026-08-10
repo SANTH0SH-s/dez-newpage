@@ -24,7 +24,7 @@ export interface Question {
   options: QuestionOption[];
   isRequired?: boolean;
   displayOrder?: number;
-  defaultValue?: any;
+  defaultValue?: string | number | boolean | string[];
   priceModifier?: number;
   modifierType?: "flat" | "multiplier";
   conditionalParentId?: string;

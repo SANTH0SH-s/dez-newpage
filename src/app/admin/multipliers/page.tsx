@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,42 +13,20 @@ import {
 import { Save, AlertCircle } from "lucide-react";
 
 export default function MultiplierManagement() {
-  const [mounted, setMounted] = useState(false);
-  const [multipliers, setMultipliers] = useState<MultiplierSet | null>(null);
+  const [multipliers, setMultipliers] = useState<MultiplierSet | null>(() => (typeof window !== "undefined" ? getMultipliers() : null));
   const [saveSuccess, setSaveSuccess] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    setMultipliers(getMultipliers());
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="space-y-8 font-sans animate-pulse">
-        <div>
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="h-64 bg-gray-200 rounded-xl"></div>
-          <div className="h-64 bg-gray-200 rounded-xl"></div>
-          <div className="h-64 bg-gray-200 rounded-xl"></div>
-        </div>
-      </div>
-    );
-  }
 
   const handleMultiplierChange = (
     category: keyof MultiplierSet,
     id: string,
     field: keyof Multiplier,
-    value: any
+    value: string | number
   ) => {
     if (!multipliers) return;
     
     const updatedCategory = multipliers[category].map((item) => 
       item.id === id 
-        ? { ...item, [field]: field === "value" ? parseFloat(value) || 1.0 : value } 
+        ? { ...item, [field]: field === "value" ? parseFloat(String(value)) || 1.0 : value } 
         : item
     );
 

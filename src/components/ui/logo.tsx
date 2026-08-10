@@ -12,6 +12,7 @@ export const DezproxLogo = ({ className = "", iconSize = 42, showTagline = false
   return (
     <div className={`flex flex-col ${className}`}>
       <div className="flex items-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img 
           src="/logo.png" 
           alt="Dezprox" 

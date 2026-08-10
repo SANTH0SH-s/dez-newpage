@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,21 +17,17 @@ import {
   FileDown, 
   TrendingUp, 
   Users, 
-  Briefcase, 
   FileText, 
-  Calendar, 
   Filter, 
   RefreshCw,
-  Award,
-  ChevronRight
+  Award
 } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function ReportsPage() {
-  const [mounted, setMounted] = useState(false);
-  const [estimates, setEstimates] = useState<Estimate[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
-  const [currency, setCurrency] = useState("₹");
+  const [estimates] = useState<Estimate[]>(() => (typeof window !== "undefined" ? getEstimates() : []));
+  const [services] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices() : []));
+  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
 
   // Filters State
   const [startDate, setStartDate] = useState("");
@@ -39,15 +35,6 @@ export default function ReportsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [serviceFilter, setServiceFilter] = useState("all");
   const [customerQuery, setCustomerQuery] = useState("");
-
-  useEffect(() => {
-    setMounted(true);
-    setEstimates(getEstimates());
-    setServices(getServices());
-    setCurrency(getGlobalSettings().currency);
-  }, []);
-
-  if (!mounted) return null;
 
   // Filter Logic
   const filteredEstimates = estimates.filter((e) => {

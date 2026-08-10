@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,6 @@ import { Select } from "@/components/ui/select";
 import { 
   getServices, 
   saveServices, 
-  getGlobalSettings,
   Service,
   FAQItem
 } from "@/lib/db";
@@ -18,35 +17,13 @@ import { Plus, Edit, Trash2, Copy, X, Save, HelpCircle, GripVertical } from "luc
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function FAQManager() {
-  const [mounted, setMounted] = useState(false);
-  const [services, setServices] = useState<Service[]>([]);
-  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+  const [services, setServices] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices() : []));
+  const [selectedServiceId, setSelectedServiceId] = useState<string>(() => (typeof window !== "undefined" ? getServices()[0]?.id || "website-dev" : "website-dev"));
   
   // Editor/Modal states
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingFAQ, setEditingFAQ] = useState<Partial<FAQItem> | null>(null);
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-    const list = getServices();
-    setServices(list);
-    if (list.length > 0) {
-      setSelectedServiceId(list[0].id);
-    }
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="space-y-8 font-sans animate-pulse">
-        <div>
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-        <div className="h-32 bg-gray-200 rounded-xl"></div>
-      </div>
-    );
-  }
 
   const activeService = services.find((s) => s.id === selectedServiceId);
   const faqs = activeService?.faqs || [];
@@ -82,7 +59,7 @@ export default function FAQManager() {
   const handleDuplicate = (faq: FAQItem) => {
     const duplicated: FAQItem = {
       ...faq,
-      id: `faq-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `${faq.id}-copy-${faqs.length + 1}`,
       question: `${faq.question} (Copy)`,
       displayOrder: faqs.length
     };

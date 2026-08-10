@@ -1,16 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   Briefcase, 
   FileText, 
-  HelpCircle, 
-  CheckCircle,
   Clock,
-  Flame,
-  ArrowRight
+  Flame
 } from "lucide-react";
 import { 
   getServices, 
@@ -21,15 +18,9 @@ import {
 } from "@/lib/db";
 
 export default function AdminDashboard() {
-  const [services, setServices] = useState<Service[]>([]);
-  const [estimates, setEstimates] = useState<Estimate[]>([]);
-  const [currency, setCurrency] = useState("₹");
-
-  useEffect(() => {
-    setServices(getServices());
-    setEstimates(getEstimates());
-    setCurrency(getGlobalSettings().currency);
-  }, []);
+  const [services] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices() : []));
+  const [estimates] = useState<Estimate[]>(() => (typeof window !== "undefined" ? getEstimates() : []));
+  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
 
   const totalServices = services.length;
   const totalEstimates = estimates.length;

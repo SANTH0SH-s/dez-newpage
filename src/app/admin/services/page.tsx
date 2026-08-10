@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import React, { useState } from "react";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -25,8 +25,6 @@ import {
 } from "lucide-react";
 
 export default function ServiceManagement() {
-  const [services, setServices] = useState<Service[]>([]);
-  const [currency, setCurrency] = useState("₹");
   
   // Editor/Modal states
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -47,10 +45,8 @@ export default function ServiceManagement() {
     reader.readAsDataURL(file);
   };
 
-  useEffect(() => {
-    setServices(getServices());
-    setCurrency(getGlobalSettings().currency);
-  }, []);
+  const [services, setServices] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices() : []));
+  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
 
   const handleToggleStatus = (id: string) => {
     const list = services.map((s) => 
@@ -95,7 +91,7 @@ export default function ServiceManagement() {
     e.preventDefault();
     if (!editingService?.name || !editingService.id) return;
 
-    let updatedList = [...services];
+    const updatedList = [...services];
     const index = services.findIndex((s) => s.id === editingService.id);
     
     if (index > -1) {
@@ -309,6 +305,7 @@ export default function ServiceManagement() {
                     className="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-dezprox-accent/15 file:text-dezprox-primary hover:file:bg-dezprox-accent/25 cursor-pointer block w-full"
                   />
                   {editingService.iconImage && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={editingService.iconImage} alt="Icon Preview" className="h-6 object-contain border rounded p-0.5 bg-white mt-1" />
                   )}
                 </div>
@@ -322,6 +319,7 @@ export default function ServiceManagement() {
                     className="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-dezprox-accent/15 file:text-dezprox-primary hover:file:bg-dezprox-accent/25 cursor-pointer block w-full"
                   />
                   {editingService.cardImage && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={editingService.cardImage} alt="Card Preview" className="h-6 object-contain border rounded p-0.5 bg-white mt-1" />
                   )}
                 </div>
@@ -335,6 +333,7 @@ export default function ServiceManagement() {
                     className="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-dezprox-accent/15 file:text-dezprox-primary hover:file:bg-dezprox-accent/25 cursor-pointer block w-full"
                   />
                   {editingService.heroBanner && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={editingService.heroBanner} alt="Hero Preview" className="h-6 object-contain border rounded p-0.5 bg-white mt-1" />
                   )}
                 </div>
@@ -348,6 +347,7 @@ export default function ServiceManagement() {
                     className="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-dezprox-accent/15 file:text-dezprox-primary hover:file:bg-dezprox-accent/25 cursor-pointer block w-full"
                   />
                   {editingService.thumbnail && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={editingService.thumbnail} alt="Thumbnail Preview" className="h-6 object-contain border rounded p-0.5 bg-white mt-1" />
                   )}
                 </div>

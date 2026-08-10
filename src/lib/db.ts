@@ -1,4 +1,5 @@
-import { SERVICES_DATA, Service as StaticService } from "@/data/servicesData";
+import { SERVICES_DATA } from "@/data/servicesData";
+import { TotalCalculationResult } from "./pricingCalculator";
 
 export interface PricingComponent {
   id: string;
@@ -37,7 +38,7 @@ export interface Question {
   type: "radio" | "checkbox" | "select" | "counter" | "number" | "text" | "toggle";
   isRequired: boolean;
   displayOrder: number;
-  defaultValue?: any;
+  defaultValue?: string | number | boolean | string[];
   priceModifier?: number;
   modifierType?: "flat" | "multiplier";
   options?: QuestionOption[];
@@ -113,8 +114,8 @@ export interface Estimate {
   totalPrice: number;
   status: "pending" | "approved" | "rejected" | "completed";
   createdDate: string;
-  breakdown: any;
-  answers: any;
+  breakdown: TotalCalculationResult | Record<string, unknown>;
+  answers: Record<string, Record<string, unknown>>;
   estimateRange?: string;
 }
 
@@ -342,12 +343,12 @@ export const initDb = () => {
           options: []
         });
       } else if (s.questions) {
-        s.questions.forEach((q: any, idx: number) => {
+        s.questions.forEach((q: { id: string; text: string; type: string; options?: QuestionOption[] }, idx: number) => {
           questionsList.push({
             id: q.id,
             text: q.text,
             description: "",
-            type: q.type as any,
+            type: q.type as Question["type"],
             isRequired: true,
             displayOrder: idx,
             defaultValue: q.type === "checkbox" ? [] : "",
@@ -585,6 +586,7 @@ export const logoutAdmin = () => {
 };
 
 // Access Control Mapper for Protected Paths
-export const hasAccessToRoute = (role: UserRole, path: string): boolean => {
+/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+export const hasAccessToRoute = (_role: UserRole, _path: string): boolean => {
   return true;
 };

@@ -7,12 +7,12 @@ import { Input } from "@/components/ui/input";
 import * as Icons from "lucide-react";
 import { ArrowLeft, ArrowRight, Cog } from "lucide-react";
 import { twMerge } from "tailwind-merge";
-import { getServices, getGlobalSettings, Service, Question, PricingComponent } from "@/lib/db";
+import { getServices, getGlobalSettings, Service, Question, PricingComponent, Package } from "@/lib/db";
 
 interface DynamicFormProps {
   selectedServiceIds: string[];
-  answers: Record<string, Record<string, any>>;
-  onAnswerChange: (serviceId: string, questionId: string, value: any) => void;
+  answers: Record<string, Record<string, unknown>>;
+  onAnswerChange: (serviceId: string, questionId: string, value: unknown) => void;
   onBack: () => void;
   onNext: () => void;
 }
@@ -24,13 +24,8 @@ export const DynamicForm = ({
   onBack,
   onNext
 }: DynamicFormProps) => {
-  const [services, setServices] = useState<Service[]>([]);
-  const [currency, setCurrency] = useState("₹");
-
-  useEffect(() => {
-    setServices(getServices());
-    setCurrency(getGlobalSettings().currency);
-  }, []);
+  const [services] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices() : []));
+  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -40,7 +35,7 @@ export const DynamicForm = ({
       selectedServiceIds.forEach((serviceId) => {
         const srv = services.find((s) => s.id === serviceId);
         if (srv && srv.packages) {
-          const activePkgs = srv.packages.filter((p: any) => p.status === "active");
+          const activePkgs = srv.packages.filter((p: Package) => p.status === "active");
           if (activePkgs.length > 0 && !answers[srv.id]?.["selected-package"]) {
             onAnswerChange(srv.id, "selected-package", activePkgs[0].id);
           }
@@ -135,7 +130,7 @@ export const DynamicForm = ({
           }
           
           if (["counter", "number"].includes(q.type)) {
-            const numVal = parseFloat(val);
+            const numVal = parseFloat(String(val));
             if (!isNaN(numVal)) {
               if (min !== undefined && numVal < min) {
                 newErrors[errorKey] = `Minimum value is ${min}.`;
@@ -171,7 +166,7 @@ export const DynamicForm = ({
 
   // Check if any package is selected across all services
   const isAnyPackageMissing = activeServices.some((service) => {
-    const servicePackages = service.packages ? service.packages.filter((p: any) => p.status === "active") : [];
+    const servicePackages = service.packages ? service.packages.filter((p: Package) => p.status === "active") : [];
     const selectedPackageId = answers[service.id]?.["selected-package"];
     return servicePackages.length > 0 && !selectedPackageId;
   });
@@ -180,7 +175,7 @@ export const DynamicForm = ({
     <div className="w-full max-w-3xl mx-auto px-4 py-8 font-sans space-y-12">
       {activeServices.map((service, index) => {
         const serviceAnswers = answers[service.id] || {};
-        const servicePackages = service.packages ? service.packages.filter((p: any) => p.status === "active") : [];
+        const servicePackages = service.packages ? service.packages.filter((p: Package) => p.status === "active") : [];
         const selectedPackageId = serviceAnswers["selected-package"];
 
         // Get combined questions for this service
@@ -199,6 +194,7 @@ export const DynamicForm = ({
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
               <div className="flex items-center space-x-3">
                 {service.thumbnail ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
                   <img src={service.thumbnail} alt={service.name} className="w-10 h-10 rounded-xl object-cover border border-gray-150 shadow-sm shrink-0" />
                 ) : (
                   <div className="p-2.5 rounded-xl bg-dezprox-accent/15 text-dezprox-primary shrink-0">
@@ -233,7 +229,7 @@ export const DynamicForm = ({
                         {/* Badges Row */}
                         <tr className="bg-gray-50">
                           <th className="py-2 px-3" style={{ width: "24%" }}></th>
-                          {servicePackages.map((pkg: any) => {
+                          {servicePackages.map((pkg: Package) => {
                             const isSelected = selectedPackageId === pkg.id;
                             return (
                               <th 
@@ -278,7 +274,7 @@ export const DynamicForm = ({
                           >
                             Comparison Plan
                           </th>
-                          {servicePackages.map((pkg: any) => {
+                          {servicePackages.map((pkg: Package) => {
                             const isSelected = selectedPackageId === pkg.id;
                             return (
                               <th 
@@ -304,7 +300,7 @@ export const DynamicForm = ({
                         {/* Price Row */}
                         <tr className="border-b border-gray-150">
                           <td className="py-3.5 px-3 font-bold text-gray-500 uppercase tracking-wide text-xs break-words">Estimated Price</td>
-                          {servicePackages.map((pkg: any) => (
+                          {servicePackages.map((pkg: Package) => (
                             <td key={pkg.id} className={twMerge("py-3.5 px-2 text-center font-extrabold text-sm text-dezprox-primary break-words", selectedPackageId === pkg.id ? "bg-dezprox-accent/5" : "")}>
                               {currency}{pkg.price.toLocaleString()}
                             </td>
@@ -315,7 +311,7 @@ export const DynamicForm = ({
                         {service.id === "website-dev" && (
                           <tr className="border-b border-gray-150">
                             <td className="py-3.5 px-3 font-bold text-gray-500 uppercase tracking-wide text-xs break-words">Default Page Count</td>
-                            {servicePackages.map((pkg: any) => (
+                            {servicePackages.map((pkg: Package) => (
                               <td key={pkg.id} className={twMerge("py-3.5 px-2 text-center font-bold text-xs text-dezprox-primary break-words", selectedPackageId === pkg.id ? "bg-dezprox-accent/5" : "")}>
                                 4 Pages
                               </td>
@@ -326,7 +322,7 @@ export const DynamicForm = ({
                         {/* Delivery Timeline row */}
                         <tr className="border-b border-gray-150">
                           <td className="py-3.5 px-3 font-bold text-gray-500 uppercase tracking-wide text-xs break-words">Delivery Duration</td>
-                          {servicePackages.map((pkg: any) => (
+                          {servicePackages.map((pkg: Package) => (
                             <td key={pkg.id} className={twMerge("py-3.5 px-2 text-center font-bold text-xs text-dezprox-primary break-words", selectedPackageId === pkg.id ? "bg-dezprox-accent/5" : "")}>
                               {pkg.timeline}
                             </td>
@@ -336,7 +332,7 @@ export const DynamicForm = ({
                         {/* Description row */}
                         <tr className="border-b border-gray-150">
                           <td className="py-3.5 px-3 font-bold text-gray-500 uppercase tracking-wide text-xs break-words">Tier Description</td>
-                          {servicePackages.map((pkg: any) => (
+                          {servicePackages.map((pkg: Package) => (
                             <td key={pkg.id} className={twMerge("py-3.5 px-2 text-center text-dezprox-text/80 leading-relaxed font-normal text-xs break-words", selectedPackageId === pkg.id ? "bg-dezprox-accent/5" : "")}>
                               {(() => {
                                 const desc = (pkg.description || "").replace(/\s*Note:.*$/gi, "").trim();
@@ -359,7 +355,7 @@ export const DynamicForm = ({
 
                         {/* Pricing Notes row */}
                         {(() => {
-                          const hasNotes = servicePackages.some((pkg: any) => 
+                          const hasNotes = servicePackages.some((pkg: Package) => 
                             (service.id === "website-dev" && (pkg.id === "web-nocode" || pkg.id.includes("web-std") || pkg.id === "web-dyn")) ||
                             (service.id === "ecommerce-dev" && pkg.id === "ecom-nocode")
                           );
@@ -369,7 +365,7 @@ export const DynamicForm = ({
                           return (
                             <tr className="border-b border-gray-150 bg-amber-50/20">
                               <td className="py-3.5 px-3 font-bold text-gray-500 uppercase tracking-wide text-xs break-words">Pricing Notes</td>
-                              {servicePackages.map((pkg: any) => {
+                              {servicePackages.map((pkg: Package) => {
                                 let noteText = "";
                                 if (service.id === "website-dev") {
                                   if (pkg.id === "web-nocode") {
@@ -420,13 +416,13 @@ export const DynamicForm = ({
                         {/* Features checklist rows */}
                         {(() => {
                           const allUniqueFeatures = Array.from(
-                            new Set(servicePackages.flatMap((p: any) => p.features || []))
+                            new Set(servicePackages.flatMap((p: Package) => p.features || []))
                           );
                           
                           return allUniqueFeatures.map((feat) => (
                             <tr key={feat} className="border-b border-gray-150 hover:bg-gray-50/20">
                               <td className="py-3 px-3 font-semibold text-dezprox-text text-xs leading-snug break-words">{feat}</td>
-                              {servicePackages.map((pkg: any) => {
+                              {servicePackages.map((pkg: Package) => {
                                 const hasFeature = pkg.features?.includes(feat);
                                 const isSelected = selectedPackageId === pkg.id;
                                 return (
@@ -452,7 +448,7 @@ export const DynamicForm = ({
                         {/* Selector Row */}
                         <tr>
                           <td className="py-3 px-3"></td>
-                          {servicePackages.map((pkg: any) => {
+                          {servicePackages.map((pkg: Package) => {
                             const isSelected = selectedPackageId === pkg.id;
                             return (
                               <td key={pkg.id} className={twMerge("py-3 px-2 text-center", isSelected ? "bg-dezprox-accent/5" : "")}>
@@ -635,7 +631,7 @@ export const DynamicForm = ({
                             <button
                               type="button"
                               onClick={() => {
-                                const val = parseInt(selectedValue) || 0;
+                                const val = parseInt(String(selectedValue)) || 0;
                                 const nextVal = Math.max(0, val - 1);
                                 onAnswerChange(service.id, question.id, nextVal);
                               }}
@@ -644,12 +640,12 @@ export const DynamicForm = ({
                               -
                             </button>
                             <span className="w-12 text-center text-sm font-black text-dezprox-primary">
-                              {selectedValue !== undefined ? selectedValue : (question.defaultValue || 0)}
+                              {(selectedValue !== undefined && selectedValue !== null) ? String(selectedValue) : String(question.defaultValue || 0)}
                             </span>
                             <button
                               type="button"
                               onClick={() => {
-                                const val = parseInt(selectedValue) || 0;
+                                const val = parseInt(String(selectedValue)) || 0;
                                 const nextVal = val + 1;
                                 onAnswerChange(service.id, question.id, nextVal);
                                 if (fieldErrors[errorKey]) setFieldErrors(prev => ({ ...prev, [errorKey]: "" }));
@@ -666,7 +662,7 @@ export const DynamicForm = ({
                               min={question.validationRules?.min}
                               max={question.validationRules?.max}
                               placeholder="Enter value..."
-                              value={selectedValue !== undefined ? selectedValue : ""}
+                              value={(selectedValue !== undefined && selectedValue !== null) ? String(selectedValue) : ""}
                               onChange={(e) => {
                                 const val = e.target.value !== "" ? parseFloat(e.target.value) : "";
                                 onAnswerChange(service.id, question.id, val);
@@ -680,7 +676,7 @@ export const DynamicForm = ({
                             <Input
                               type="text"
                               placeholder="Enter details..."
-                              value={selectedValue !== undefined ? selectedValue : ""}
+                              value={(selectedValue !== undefined && selectedValue !== null) ? String(selectedValue) : ""}
                               onChange={(e) => {
                                 onAnswerChange(service.id, question.id, e.target.value);
                                 if (fieldErrors[errorKey]) setFieldErrors(prev => ({ ...prev, [errorKey]: "" }));
@@ -730,8 +726,8 @@ export const DynamicForm = ({
                       
                       <div className="grid grid-cols-1 gap-3">
                         {items.map((comp) => {
-                          const selectedComponents = serviceAnswers["pricing-components"] || [];
-                          const componentUnits = serviceAnswers["pricing-component-units"] || {};
+                          const selectedComponents = (serviceAnswers["pricing-components"] as string[]) || [];
+                          const componentUnits = (serviceAnswers["pricing-component-units"] as Record<string, number>) || {};
                           const isSelected = selectedComponents.includes(comp.id);
                           const units = componentUnits[comp.id] || 1;
 

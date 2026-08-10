@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,57 +14,33 @@ import {
   Service,
   PricingComponent 
 } from "@/lib/db";
-import { Plus, Edit, Trash2, Copy, X, Save, PlusCircle, Sparkles } from "lucide-react";
+import { Plus, Edit, Trash2, Copy, X, Save, PlusCircle } from "lucide-react";
 import * as Icons from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 
 export default function AddonManager() {
-  const [mounted, setMounted] = useState(false);
-  const [services, setServices] = useState<Service[]>([]);
-  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
-  const [currency, setCurrency] = useState("₹");
+  const [services, setServices] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices() : []));
+  const [selectedServiceId, setSelectedServiceId] = useState<string>(() => (typeof window !== "undefined" ? getServices()[0]?.id || "website-dev" : "website-dev"));
+  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
   
   // Editor/Modal states
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingComponent, setEditingComponent] = useState<Partial<PricingComponent> | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-    const list = getServices();
-    setServices(list);
-    if (list.length > 0) {
-      setSelectedServiceId(list[0].id);
-    }
-    setCurrency(getGlobalSettings().currency);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="space-y-8 font-sans animate-pulse">
-        <div>
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-        <div className="h-32 bg-gray-200 rounded-xl"></div>
-      </div>
-    );
-  }
-
   const activeService = services.find((s) => s.id === selectedServiceId);
   const components = activeService?.pricingComponents || [];
 
-  const updateServiceComponents = (updatedComps: PricingComponent[]) => {
-    if (!activeService) return;
+  const updateServiceComponents = (updatedComponents: PricingComponent[]) => {
     const updatedServices = services.map((s) => 
-      s.id === activeService.id 
-        ? { ...s, pricingComponents: updatedComps } 
+      s.id === selectedServiceId 
+        ? { ...s, pricingComponents: updatedComponents } 
         : s
     );
-    setServices(updatedServices);
     saveServices(updatedServices);
+    setServices(updatedServices);
   };
 
-  const handleOpenAdd = () => {
+  const handleCreate = () => {
     setEditingComponent({
       id: `comp-${Math.floor(1000 + Math.random() * 9000)}`,
       name: "",
@@ -82,7 +58,7 @@ export default function AddonManager() {
     setIsEditorOpen(true);
   };
 
-  const handleOpenEdit = (comp: PricingComponent) => {
+  const handleEdit = (comp: PricingComponent) => {
     setEditingComponent({
       ...comp,
       maxQuantity: comp.maxQuantity ?? 1,
@@ -98,7 +74,7 @@ export default function AddonManager() {
   const handleDuplicate = (comp: PricingComponent) => {
     const duplicated: PricingComponent = {
       ...comp,
-      id: `comp-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `${comp.id}-copy-${components.length + 1}`,
       name: `${comp.name} (Copy)`
     };
     const updated = [...components, duplicated];
@@ -116,9 +92,6 @@ export default function AddonManager() {
     e.preventDefault();
     if (!activeService || !editingComponent?.id || !editingComponent.name) return;
 
-    const updated = [...components];
-    const index = components.findIndex((c) => c.id === editingComponent.id);
-
     const fullComponent: PricingComponent = {
       id: editingComponent.id,
       name: editingComponent.name,
@@ -134,10 +107,13 @@ export default function AddonManager() {
       note: editingComponent.note || ""
     };
 
+    const index = components.findIndex((c) => c.id === editingComponent.id);
+    let updated: PricingComponent[];
     if (index > -1) {
+      updated = [...components];
       updated[index] = fullComponent;
     } else {
-      updated.push(fullComponent);
+      updated = [...components, fullComponent];
     }
 
     updateServiceComponents(updated);
@@ -147,7 +123,7 @@ export default function AddonManager() {
 
   // Helper to render dynamically referenced Lucide Icons safely
   const renderIcon = (iconName: string) => {
-    const IconComp = (Icons as any)[iconName];
+    const IconComp = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[iconName];
     if (IconComp) {
       return <IconComp className="w-5 h-5" />;
     }
@@ -161,25 +137,30 @@ export default function AddonManager() {
           Add-on Management
         </h1>
         <p className="text-dezprox-text/60 mt-1 text-sm">
-          Configure optional supplementary components, pricing structures, and boundary quantities.
+          Define optional feature modules, micro-services, and scaling options per service tier.
         </p>
       </div>
 
-      {/* Select Service Dropdown */}
-      <Card className="p-6 border-gray-100 shadow-sm bg-white">
-        <div className="max-w-md space-y-2">
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
-            Select Service to Manage Add-ons
-          </label>
-          <Select
-            options={services.map((s) => ({ value: s.id, label: s.name }))}
-            value={selectedServiceId}
-            onChange={(e) => setSelectedServiceId(e.target.value)}
-          />
-        </div>
-      </Card>
+      {/* Service Selector Tabs */}
+      <div className="flex flex-wrap gap-2 pb-2 border-b border-gray-100">
+        {services.map((srv) => {
+          const isSelected = srv.id === selectedServiceId;
+          return (
+            <button
+              key={srv.id}
+              onClick={() => setSelectedServiceId(srv.id)}
+              className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                isSelected
+                  ? "bg-dezprox-primary text-white shadow-sm"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {srv.name}
+            </button>
+          );
+        })}
+      </div>
 
-      {/* Components Management List */}
       {activeService && (
         <Card className="border-gray-100 shadow-sm bg-white overflow-hidden">
           <CardHeader className="bg-gray-50/70 border-b border-gray-100 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -192,7 +173,7 @@ export default function AddonManager() {
               </CardDescription>
             </div>
             <Button
-              onClick={handleOpenAdd}
+              onClick={handleCreate}
               variant="accent"
               size="sm"
               className="flex items-center gap-2 cursor-pointer shadow-sm"
@@ -270,7 +251,7 @@ export default function AddonManager() {
                             <Copy className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => handleOpenEdit(comp)}
+                            onClick={() => handleEdit(comp)}
                             className="p-1 border border-gray-100 hover:border-gray-200 text-gray-500 rounded hover:text-dezprox-primary hover:bg-gray-50 cursor-pointer transition-colors"
                             title="Edit Add-on"
                           >

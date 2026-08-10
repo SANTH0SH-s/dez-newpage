@@ -7,14 +7,13 @@ import { Hero } from "@/components/estimator/hero";
 import { ServiceSelector } from "@/components/estimator/service-selector";
 import { DynamicForm } from "@/components/estimator/dynamic-form";
 import { PriceSummary } from "@/components/estimator/price-summary";
-import { ContactForm, ContactData } from "@/components/estimator/contact-form";
+import { ContactData } from "@/components/estimator/contact-form";
 import { SuccessMessage } from "@/components/estimator/success-message";
 import { ProgressStepper } from "@/components/ui/progress-stepper";
-import { ShieldCheck, ArrowRight, Settings } from "lucide-react";
+import { ShieldCheck, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { addEstimate, getGlobalSettings, getServices, initDb } from "@/lib/db";
-import { calculateProjectCosts } from "@/lib/pricingCalculator";
+import { initDb } from "@/lib/db";
 
 const FLOW_STEPS = [
   "Choose Services",
@@ -26,7 +25,7 @@ const FLOW_STEPS = [
 export default function Home() {
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
-  const [answers, setAnswers] = useState<Record<string, Record<string, any>>>({});
+  const [answers, setAnswers] = useState<Record<string, Record<string, unknown>>>({});
   const [contactData, setContactData] = useState<ContactData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
@@ -37,18 +36,11 @@ export default function Home() {
     quality: "standard"
   });
 
-  const [currency, setCurrency] = useState("₹");
-
   useEffect(() => {
     initDb();
-    setCurrency(getGlobalSettings().currency);
   }, []);
 
-  const handleModifierChange = (name: string, value: string) => {
-    setProjectModifiers((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleAnswerChange = (serviceId: string, questionId: string, value: any) => {
+  const handleAnswerChange = (serviceId: string, questionId: string, value: unknown) => {
     setAnswers((prev) => ({
       ...prev,
       [serviceId]: {
@@ -62,39 +54,9 @@ export default function Home() {
   const handleNextFromSelector = () => setCurrentStep(2);
   const handleNextFromForm = () => setCurrentStep(3);
   const handleNextFromSummary = () => setCurrentStep(4);
-  
-  const handleContactSubmit = (data: ContactData, modifiers: typeof projectModifiers) => {
-    setContactData(data);
-    
-    // Save estimate and enquiry to dynamic db
-    const services = getServices();
-    const activeServices = services.filter((s) => selectedServiceIds.includes(s.id));
-    const serviceNames = activeServices.map((s) => s.name);
-    
-    const result = calculateProjectCosts(selectedServiceIds, answers, modifiers);
-    const rangeText = `${currency}${result.estimatedMin.toLocaleString()} - ${currency}${result.estimatedMax.toLocaleString()}`;
-
-    // Add to DB
-    addEstimate({
-      customerName: data.name,
-      customerEmail: data.email,
-      customerPhone: data.phone,
-      customerCompany: data.company,
-      notes: data.notes,
-      serviceNames: serviceNames,
-      totalPrice: result.finalCost,
-      status: "pending",
-      breakdown: result,
-      answers: answers,
-      estimateRange: rangeText
-    });
-
-    setCurrentStep(5);
-  };
 
   const handleBackToSelector = () => setCurrentStep(1);
   const handleBackToForm = () => setCurrentStep(2);
-  const handleBackToSummary = () => setCurrentStep(3);
 
   const handleReset = () => {
     setSelectedServiceIds([]);

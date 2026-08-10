@@ -1,22 +1,16 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { calculateProjectCosts } from "@/lib/pricingCalculator";
+import { calculateProjectCosts, CostDetailItem } from "@/lib/pricingCalculator";
 import { ContactData } from "./contact-form";
 import { 
-  Check, 
   ArrowRight,
-  Printer, 
   Sparkles, 
   Building2, 
-  Calendar, 
   Mail, 
   Phone, 
-  FileText,
   FileDown,
   MessageCircle,
   PhoneCall,
@@ -24,17 +18,16 @@ import {
   CalendarDays,
   X,
   CheckCircle,
-  HelpCircle,
   Clock,
   Coins
 } from "lucide-react";
-import { getGlobalSettings, addEstimate } from "@/lib/db";
+import { getGlobalSettings, GlobalSettings, addEstimate } from "@/lib/db";
 import { motion, AnimatePresence } from "framer-motion";
 import * as Icons from "lucide-react";
 
 interface SuccessMessageProps {
   selectedServiceIds: string[];
-  answers: Record<string, Record<string, any>>;
+  answers: Record<string, Record<string, unknown>>;
   contactData: ContactData | null;
   onReset: () => void;
   onBack?: () => void;
@@ -53,10 +46,8 @@ export const SuccessMessage = ({
   onContactSave,
   onModalStateChange
 }: SuccessMessageProps) => {
-  const [mounted, setMounted] = useState(false);
-  const [currency, setCurrency] = useState("₹");
-  const [whatsappConfigured, setWhatsappConfigured] = useState(false);
-  const [settings, setSettings] = useState<any | null>(null);
+  const [settings] = useState<GlobalSettings | null>(() => (typeof window !== "undefined" ? getGlobalSettings() : null));
+  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
   
   // Lead Generation Modals / Forms States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -76,14 +67,6 @@ export const SuccessMessage = ({
   // Instant Confirmation feedback states
   const [alertMessage, setAlertMessage] = useState<{ type: "success" | "info"; text: string } | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-    const settings = getGlobalSettings();
-    setSettings(settings);
-    setCurrency(settings.currency);
-    setWhatsappConfigured(!!settings.whatsappNumber);
-  }, []);
-
   const result = calculateProjectCosts(selectedServiceIds, answers, projectModifiers);
 
   // Proposal Numbers and Dates
@@ -97,10 +80,10 @@ export const SuccessMessage = ({
     return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   }, []);
 
-  const quotationNumber = React.useMemo(() => {
+  const [quotationNumber] = useState(() => {
     const num = Math.floor(100000 + Math.random() * 900000);
     return `QTN-2026-${num}`;
-  }, []);
+  });
 
   const currentSettings = settings || { currency: "₹", taxRate: 18, discountRate: 5 };
   const subtotal = result.oneTimeSubtotal;
@@ -113,8 +96,6 @@ export const SuccessMessage = ({
   const monthlyTax = result.monthlyTax;
   const monthlyGrandTotal = result.monthlyFinalCost;
 
-  if (!mounted) return null;
-
   // Build the prefilled WhatsApp Text
   const getWhatsAppLink = (expertMode = false) => {
     const settings = getGlobalSettings();
@@ -122,7 +103,7 @@ export const SuccessMessage = ({
     const cleanedNum = wsNum.replace(/[^0-9+]/g, "");
     
     const serviceDetails = result.services.map(s => {
-      const baseItem = s.details.find((d: any) => d.type === "base");
+      const baseItem = s.details.find((d: CostDetailItem) => d.type === "base");
       const displayName = baseItem ? baseItem.name : s.serviceName;
       return `- ${displayName} (${currency}${Math.round(s.totalCost).toLocaleString()})`;
     }).join("\n");
@@ -423,7 +404,7 @@ export const SuccessMessage = ({
               </div>
             ) : (
               <div className="text-xs text-gray-450 italic font-medium p-4 border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
-                Contact information pending scope reservation details. Click "Download PDF Quote" above to customize and bind client details.
+                Contact information pending scope reservation details. Click &quot;Download PDF Quote&quot; above to customize and bind client details.
               </div>
             )}
           </div>
@@ -612,7 +593,7 @@ export const SuccessMessage = ({
           {contactData?.notes && (
             <div className="space-y-1.5">
               <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Requirement Notes</span>
-              <p className="text-[10px] text-dezprox-text/50 italic leading-relaxed">"{contactData.notes}"</p>
+              <p className="text-[10px] text-dezprox-text/50 italic leading-relaxed">&quot;{contactData.notes}&quot;</p>
             </div>
           )}
           <div className="flex flex-col md:items-end justify-end mt-4 md:mt-0">

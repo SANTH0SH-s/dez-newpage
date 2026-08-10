@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DezproxLogo } from "@/components/ui/logo";
+import Link from "next/link";
 import { loginAdmin, getCurrentSession } from "@/lib/db";
 import { Lock, Mail, ArrowRight, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
@@ -22,7 +23,7 @@ export default function AdminLoginPage() {
     if (getCurrentSession()) {
       router.push("/admin");
     }
-  }, []);
+  }, [router]);
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,13 +130,13 @@ export default function AdminLoginPage() {
 
               {/* Back to Client portal */}
               <div className="pt-3 text-center border-t border-gray-100">
-                <a
+                <Link
                   href="/"
                   className="text-xs font-bold text-gray-400 hover:text-dezprox-accent transition-all duration-300 inline-flex items-center gap-1.5"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   Back to Client Estimator
-                </a>
+                </Link>
               </div>
             </form>
           </CardContent>

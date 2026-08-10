@@ -1,30 +1,27 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { 
   getServices, 
   saveServices, 
   getGlobalSettings,
   Service,
-  Package,
   Question,
   QuestionOption
 } from "@/lib/db";
-import { Plus, Edit, Trash2, Copy, X, Save, HelpCircle, GripVertical, Settings2, Eye } from "lucide-react";
+import { Plus, Edit, Trash2, Copy, X, Save, HelpCircle, GripVertical, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function QuestionnaireBuilder() {
-  const [mounted, setMounted] = useState(false);
-  const [services, setServices] = useState<Service[]>([]);
-  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+  const [services, setServices] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices() : []));
+  const [selectedServiceId, setSelectedServiceId] = useState<string>(() => (typeof window !== "undefined" ? getServices()[0]?.id || "website-dev" : "website-dev"));
   const [selectedPackageId, setSelectedPackageId] = useState<string>("general");
-  const [currency, setCurrency] = useState("₹");
+  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
   
   // Editor/Modal states
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -39,28 +36,6 @@ export default function QuestionnaireBuilder() {
 
   // Drag and drop helper state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-    const list = getServices();
-    setServices(list);
-    if (list.length > 0) {
-      setSelectedServiceId(list[0].id);
-    }
-    setCurrency(getGlobalSettings().currency);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="space-y-8 font-sans animate-pulse">
-        <div>
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-        <div className="h-32 bg-gray-200 rounded-xl"></div>
-      </div>
-    );
-  }
 
   const activeService = services.find((s) => s.id === selectedServiceId);
   const packagesList = activeService?.packages || [];
@@ -154,7 +129,7 @@ export default function QuestionnaireBuilder() {
   const handleDuplicate = (q: Question) => {
     const duplicated: Question = {
       ...q,
-      id: `q-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: `${q.id}-copy-${activeQuestions.length + 1}`,
       text: `${q.text} (Copy)`,
       displayOrder: activeQuestions.length
     };
@@ -450,7 +425,7 @@ export default function QuestionnaireBuilder() {
                         { value: "toggle", label: "Toggle Yes/No Switch" },
                       ]}
                       value={editingQuestion.type || "radio"}
-                      onChange={(e) => setEditingQuestion({ ...editingQuestion, type: e.target.value as any })}
+                      onChange={(e) => setEditingQuestion({ ...editingQuestion, type: e.target.value as Question["type"] })}
                     />
                   </div>
                 </div>
@@ -473,7 +448,7 @@ export default function QuestionnaireBuilder() {
                       placeholder="e.g. standard, 1, true, or blank"
                       value={editingQuestion.defaultValue !== undefined ? String(editingQuestion.defaultValue) : ""}
                       onChange={(e) => {
-                        let val: any = e.target.value;
+                        let val: string | number | boolean = e.target.value;
                         if (editingQuestion.type === "toggle") val = e.target.value === "true";
                         if (["counter", "number"].includes(editingQuestion.type as string)) val = parseFloat(e.target.value) || 0;
                         setEditingQuestion({ ...editingQuestion, defaultValue: val });
@@ -702,7 +677,7 @@ export default function QuestionnaireBuilder() {
                             { value: "multiplier", label: "Multiplier Offset" },
                           ]}
                           value={optionType}
-                          onChange={(e) => setOptionType(e.target.value as any)}
+                          onChange={(e) => setOptionType(e.target.value as "flat" | "multiplier")}
                         />
                       </div>
 

@@ -1,4 +1,4 @@
-import { getServices, getMultipliers, getGlobalSettings } from "@/lib/db";
+import { getServices, getMultipliers, getGlobalSettings, Package, QuestionOption } from "./db";
 
 export interface CostBreakdownItem {
   id: string;
@@ -40,9 +40,11 @@ export interface TotalCalculationResult {
   monthlyFinalCost: number;
 }
 
+export type CostDetailItem = CostBreakdownItem;
+
 export const calculateProjectCosts = (
   selectedServiceIds: string[],
-  answers: Record<string, Record<string, any>>,
+  answers: Record<string, Record<string, unknown>> = {},
   projectModifiers?: { complexity?: string; urgency?: string; quality?: string }
 ): TotalCalculationResult => {
   const services = getServices();
@@ -57,14 +59,15 @@ export const calculateProjectCosts = (
     const service = services.find((s) => s.id === serviceId);
     if (!service || service.status === "inactive") return;
 
-    const serviceAnswers = answers[serviceId] || {};
+    // Cast serviceAnswers to Record<string, unknown> internally for safe property access & type narrowing
+    const serviceAnswers: Record<string, unknown> = (answers[serviceId] as Record<string, unknown>) || {};
     const selectedPackageId = serviceAnswers["selected-package"];
 
     let basePrice = service.basePrice;
     let baseLabel = `${service.name} (Base Service)`;
     let isBaseMonthly = false;
     if (selectedPackageId && service.packages) {
-      const pkg = service.packages.find((p: any) => p.id === selectedPackageId);
+      const pkg = service.packages.find((p: Package) => p.id === selectedPackageId);
       if (pkg) {
         basePrice = pkg.price;
         baseLabel = `${service.name} (${pkg.name} Package)`;
@@ -124,7 +127,7 @@ export const calculateProjectCosts = (
 
         // A. Radio, Checkbox, Dropdown
         if (["radio", "checkbox", "select"].includes(question.type) && question.options) {
-          question.options.forEach((option: any) => {
+          question.options.forEach((option: QuestionOption) => {
             const isSelected = Array.isArray(selectedValue)
               ? selectedValue.includes(option.value)
               : selectedValue === option.value;
@@ -184,7 +187,7 @@ export const calculateProjectCosts = (
         
         // C. Counter / Number
         if (["counter", "number"].includes(question.type)) {
-          const val = parseFloat(selectedValue) || 0;
+          const val = parseFloat(String(selectedValue)) || 0;
           const mod = question.priceModifier || 0;
           const type = question.modifierType || "flat";
           
@@ -239,8 +242,8 @@ export const calculateProjectCosts = (
     }
 
     // 2. Custom Pricing Components (Module 3)
-    const selectedComponents = serviceAnswers["pricing-components"] || [];
-    const componentUnits = serviceAnswers["pricing-component-units"] || {};
+    const selectedComponents = (serviceAnswers["pricing-components"] as string[]) || [];
+    const componentUnits = (serviceAnswers["pricing-component-units"] as Record<string, number>) || {};
 
     if (service.pricingComponents) {
       service.pricingComponents.forEach((comp) => {
@@ -285,7 +288,7 @@ export const calculateProjectCosts = (
     // Timeline Estimation calculations
     let baselineTimeline = "2-4 Weeks";
     if (selectedPackageId && service.packages) {
-      const pkg = service.packages.find((p: any) => p.id === selectedPackageId);
+      const pkg = service.packages.find((p: Package) => p.id === selectedPackageId);
       if (pkg) {
         baselineTimeline = pkg.timeline;
       }
@@ -346,8 +349,8 @@ export const calculateProjectCosts = (
     monthlySubtotal += srvMonthly * srv.multiplierProduct;
   });
 
-  let finalOneTimeCost = oneTimeSubtotal * compOpt.value * urgOpt.value * qualOpt.value;
-  let finalMonthlyCost = monthlySubtotal;
+  const finalOneTimeCost = oneTimeSubtotal * compOpt.value * urgOpt.value * qualOpt.value;
+  const finalMonthlyCost = monthlySubtotal;
 
   // Apply discounts
   let oneTimeDiscount = 0;
@@ -369,8 +372,8 @@ export const calculateProjectCosts = (
     monthlyTax = (finalMonthlyCost - monthlyDiscount) * (settings.taxRate / 100);
   }
 
-  let oneTimeFinalCost = finalOneTimeCost - oneTimeDiscount + oneTimeTax;
-  let monthlyFinalCost = finalMonthlyCost - monthlyDiscount + monthlyTax;
+  const oneTimeFinalCost = finalOneTimeCost - oneTimeDiscount + oneTimeTax;
+  const monthlyFinalCost = finalMonthlyCost - monthlyDiscount + monthlyTax;
 
   let finalCost = oneTimeFinalCost + monthlyFinalCost;
 

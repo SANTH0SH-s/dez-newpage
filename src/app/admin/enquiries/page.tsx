@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import React, { useState } from "react";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -10,26 +10,19 @@ import {
   deleteEnquiry, 
   updateEnquiryStatus, 
   getServices,
-  getGlobalSettings,
-  Enquiry 
+  Enquiry,
+  Service
 } from "@/lib/db";
 import { Search, Trash2, Eye, X, Phone, Mail, Building, Check, Clock } from "lucide-react";
 
 export default function CustomerEnquiries() {
-  const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
-  const [servicesList, setServicesList] = useState<any[]>([]);
+  const [enquiries, setEnquiries] = useState<Enquiry[]>(() => (typeof window !== "undefined" ? getEnquiries() : []));
+  const [servicesList] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices() : []));
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [currency, setCurrency] = useState("₹");
   
   // Details Modal state
   const [viewingEnquiry, setViewingEnquiry] = useState<Enquiry | null>(null);
-
-  useEffect(() => {
-    setEnquiries(getEnquiries());
-    setServicesList(getServices());
-    setCurrency(getGlobalSettings().currency);
-  }, []);
 
   const handleDelete = (id: string) => {
     if (confirm(`Are you sure you want to delete Enquiry ${id}?`)) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { getIcon } from "@/data/servicesData";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,13 +36,8 @@ interface ServiceSelectorProps {
 }
 
 export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: ServiceSelectorProps) => {
-  const [services, setServices] = useState<Service[]>([]);
-  const [currency, setCurrency] = useState("₹");
-
-  useEffect(() => {
-    setServices(getServices().filter((s) => s.status === "active"));
-    setCurrency(getGlobalSettings().currency);
-  }, []);
+  const [services] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices().filter((s) => s.status === "active") : []));
+  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
 
   const handleToggle = (id: string) => {
     if (selectedServiceIds.includes(id)) {
@@ -109,6 +104,7 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
 
                 {service.cardImage && (
                   <div className="w-full h-32 overflow-hidden border-b border-gray-100 shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={service.cardImage} alt={service.name} className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" />
                   </div>
                 )}
@@ -123,6 +119,7 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
                     )}
                   >
                     {service.iconImage ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
                       <img src={service.iconImage} alt={service.name} className="w-6 h-6 object-contain" />
                     ) : (
                       <IconComponent className="w-6 h-6" />

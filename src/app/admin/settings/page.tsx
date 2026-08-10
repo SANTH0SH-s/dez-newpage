@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,14 +13,10 @@ import {
 import { Save, Check, RefreshCw } from "lucide-react";
 
 export default function GlobalSettingsView() {
-  const [settings, setSettings] = useState<GlobalSettings | null>(null);
+  const [settings, setSettings] = useState<GlobalSettings | null>(() => (typeof window !== "undefined" ? getGlobalSettings() : null));
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  useEffect(() => {
-    setSettings(getGlobalSettings());
-  }, []);
-
-  const handleInputChange = (field: keyof GlobalSettings, value: any) => {
+  const handleInputChange = (field: keyof GlobalSettings, value: unknown) => {
     if (!settings) return;
     setSettings({
       ...settings,
@@ -36,10 +32,10 @@ export default function GlobalSettingsView() {
 
     const cleanedSettings: GlobalSettings = {
       ...settings,
-      taxRate: parseFloat(settings.taxRate as any) || 0,
-      discountRate: parseFloat(settings.discountRate as any) || 0,
-      minimumCost: parseFloat(settings.minimumCost as any) || 0,
-      maximumCost: parseFloat(settings.maximumCost as any) || 0,
+      taxRate: parseFloat(String(settings.taxRate)) || 0,
+      discountRate: parseFloat(String(settings.discountRate)) || 0,
+      minimumCost: parseFloat(String(settings.minimumCost)) || 0,
+      maximumCost: parseFloat(String(settings.maximumCost)) || 0,
     };
 
     saveGlobalSettings(cleanedSettings);

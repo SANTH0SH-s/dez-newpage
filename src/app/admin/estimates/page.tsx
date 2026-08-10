@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import React, { useState } from "react";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -13,21 +12,17 @@ import {
   getGlobalSettings,
   Estimate 
 } from "@/lib/db";
+import { CostDetailItem, ServiceCostBreakdown } from "@/lib/pricingCalculator";
 import { Search, Trash2, Eye, X, Check, XCircle, RefreshCw } from "lucide-react";
 
 export default function EstimateManagement() {
-  const [estimates, setEstimates] = useState<Estimate[]>([]);
+  const [estimates, setEstimates] = useState<Estimate[]>(() => (typeof window !== "undefined" ? getEstimates() : []));
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [currency, setCurrency] = useState("₹");
+  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
   
   // Details Modal state
   const [viewingEstimate, setViewingEstimate] = useState<Estimate | null>(null);
-
-  useEffect(() => {
-    setEstimates(getEstimates());
-    setCurrency(getGlobalSettings().currency);
-  }, []);
 
   const handleDelete = (id: string) => {
     if (confirm(`Are you sure you want to delete Estimate ${id}?`)) {
@@ -296,21 +291,21 @@ export default function EstimateManagement() {
               </div>
 
               {/* Customer Notes / Messages */}
-              {viewingEstimate.notes && (
+              {viewingEstimate.notes ? (
                 <div className="space-y-2">
                   <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Customer Notes</span>
                   <div className="border border-gray-100 p-4 rounded-xl bg-slate-50/20 text-xs text-dezprox-primary font-normal leading-relaxed">
-                    {viewingEstimate.notes}
+                    {String(viewingEstimate.notes)}
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {/* Questionnaire Answers */}
-              {viewingEstimate.answers && Object.keys(viewingEstimate.answers).length > 0 && (
+              {viewingEstimate.answers && Object.keys(viewingEstimate.answers).length > 0 ? (
                 <div className="space-y-3">
                   <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Questionnaire Responses</span>
                   <div className="border border-gray-100 rounded-xl divide-y divide-gray-100 overflow-hidden bg-white">
-                    {Object.entries(viewingEstimate.answers).map(([serviceId, serviceAnswers]: [string, any]) => {
+                    {Object.entries(viewingEstimate.answers).map(([serviceId, serviceAnswers]: [string, Record<string, unknown>]) => {
                       if (!serviceAnswers || Object.keys(serviceAnswers).length === 0) return null;
                       
                       return (
@@ -319,7 +314,7 @@ export default function EstimateManagement() {
                             Service ID: {serviceId}
                           </span>
                           <div className="space-y-2">
-                            {Object.entries(serviceAnswers).map(([qId, val]: [string, any]) => {
+                            {Object.entries(serviceAnswers).map(([qId, val]: [string, unknown]) => {
                               if (qId === "selected-package") {
                                 return (
                                   <div key={qId} className="text-xs">
@@ -362,14 +357,14 @@ export default function EstimateManagement() {
                     })}
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {/* Itemized breakdown (if dynamic calculate breakdown exists) */}
-              {viewingEstimate.breakdown?.services && (
+              {viewingEstimate.breakdown?.services ? (
                 <div className="space-y-3">
                   <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Cost Breakdown Items</span>
                   <div className="border border-gray-100 rounded-xl divide-y divide-gray-100 overflow-hidden">
-                    {viewingEstimate.breakdown.services.map((srv: any, idx: number) => (
+                    {(viewingEstimate.breakdown.services as ServiceCostBreakdown[]).map((srv: ServiceCostBreakdown, idx: number) => (
                       <div key={idx} className="p-4 space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-dezprox-primary text-sm">{srv.serviceName}</span>
@@ -378,7 +373,7 @@ export default function EstimateManagement() {
                           </span>
                         </div>
                         <ul className="text-xs text-gray-400 space-y-1 pl-4 list-disc">
-                          {srv.details?.filter((d: any) => d.type !== "base").map((d: any, dIdx: number) => (
+                          {srv.details?.filter((d: CostDetailItem) => d.type !== "base").map((d: CostDetailItem, dIdx: number) => (
                             <li key={dIdx} className="flex justify-between">
                               <span>{d.name}</span>
                               <span className="font-mono text-gray-500 text-[10px]">{d.costLabel}</span>
@@ -389,7 +384,7 @@ export default function EstimateManagement() {
                     ))}
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

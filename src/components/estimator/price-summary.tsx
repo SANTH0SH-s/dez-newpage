@@ -11,16 +11,18 @@ import { getGlobalSettings, GlobalSettings, addEstimate } from "@/lib/db";
 import { motion, AnimatePresence } from "framer-motion";
 import { twMerge } from "tailwind-merge";
 
+import { ContactData } from "./contact-form";
+
 interface PriceSummaryProps {
   selectedServiceIds: string[];
-  answers: Record<string, Record<string, any>>;
+  answers: Record<string, Record<string, unknown>>;
   onBack?: () => void;
   onNext?: () => void;
   sidebarMode?: boolean;
   projectModifiers?: { complexity?: string; urgency?: string; quality?: string };
   isMobileSheet?: boolean;
-  contactData?: any;
-  onContactSave?: (data: any) => void;
+  contactData?: ContactData | null;
+  onContactSave?: (data: ContactData) => void;
 }
 
 // Smoothly animated count-up numbers using requestAnimationFrame
@@ -28,7 +30,7 @@ const AnimatedNumber = ({ value, currency }: { value: number; currency: string }
   const [displayValue, setDisplayValue] = useState(value);
 
   useEffect(() => {
-    let start = displayValue;
+    const start = displayValue;
     const end = value;
     if (start === end) return;
 
@@ -50,7 +52,7 @@ const AnimatedNumber = ({ value, currency }: { value: number; currency: string }
     };
 
     requestAnimationFrame(animate);
-  }, [value]);
+  }, [value, displayValue]);
 
   return <span>{currency}{displayValue.toLocaleString()}</span>;
 };
@@ -66,17 +68,13 @@ export const PriceSummary = ({
   contactData = null,
   onContactSave
 }: PriceSummaryProps) => {
-  const [settings, setSettings] = useState<GlobalSettings | null>(null);
+  const [settings] = useState<GlobalSettings | null>(() => (typeof window !== "undefined" ? getGlobalSettings() : null));
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   // Lead Gate local states
   const [localName, setLocalName] = useState("");
   const [localEmail, setLocalEmail] = useState("");
   const [localPhone, setLocalPhone] = useState("");
-
-  useEffect(() => {
-    setSettings(getGlobalSettings());
-  }, []);
 
   const currentSettings = settings || { currency: "₹", taxRate: 18, discountRate: 5, gateEstimateWithLeadForm: false };
   const currency = currentSettings.currency;

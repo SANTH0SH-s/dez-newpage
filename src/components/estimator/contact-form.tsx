@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -6,12 +6,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { calculateProjectCosts } from "@/lib/pricingCalculator";
-import { ArrowLeft, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { getGlobalSettings } from "@/lib/db";
 
 interface ContactFormProps {
   selectedServiceIds: string[];
-  answers: Record<string, Record<string, any>>;
+  answers: Record<string, Record<string, unknown>>;
   onSubmit: (contactData: ContactData, modifiers: { complexity: string; urgency: string; quality: string }) => void;
   onBack: () => void;
   projectModifiers: { complexity: string; urgency: string; quality: string };
@@ -34,11 +34,7 @@ export const ContactForm = ({
   projectModifiers,
   onModifierChange
 }: ContactFormProps) => {
-  const [currency, setCurrency] = useState("₹");
-
-  useEffect(() => {
-    setCurrency(getGlobalSettings().currency);
-  }, []);
+  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
 
   const result = calculateProjectCosts(selectedServiceIds, answers, projectModifiers);
   

@@ -8,7 +8,8 @@ import {
   LayoutDashboard, 
   Settings as SettingsIcon, 
   Briefcase, 
-  ChevronRight, 
+  ChevronRight,
+  LogOut,
   ArrowLeft,
   Menu,
   X,
@@ -16,14 +17,11 @@ import {
   HelpCircle,
   FolderLock,
   Layers,
-  MessageSquare,
   PlusCircle,
-  LogOut,
   BarChart2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { initDb, getCurrentSession, logoutAdmin, hasAccessToRoute, UserSession, updateAdminPassword } from "@/lib/db";
 
@@ -47,8 +45,12 @@ export default function AdminLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [session, setSession] = useState<UserSession | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [session] = useState<UserSession | null>(() => (typeof window !== "undefined" ? getCurrentSession() : null));
+  const [loading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const session = getCurrentSession();
+    return !session;
+  });
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -59,33 +61,23 @@ export default function AdminLayout({
     
     // Auth route checker guard
     const activeSession = getCurrentSession();
-    setSession(activeSession);
 
     if (!activeSession) {
       if (pathname !== "/admin/login" && pathname !== "/admin/unauthorized") {
         router.push("/admin/login");
-        return;
       }
-      setLoading(false);
     } else {
       if (pathname === "/admin/login") {
         router.push("/admin");
-        return;
+      } else {
+        const hasAccess = hasAccessToRoute(activeSession.role, pathname);
+        if (!hasAccess && pathname !== "/admin/unauthorized") {
+          router.push("/admin/unauthorized");
+        }
       }
-      
-      const hasAccess = hasAccessToRoute(activeSession.role, pathname);
-      if (!hasAccess && pathname !== "/admin/unauthorized") {
-        router.push("/admin/unauthorized");
-        return;
-      }
-      setLoading(false);
     }
   }, [pathname, router]);
 
-  // Close mobile sidebar on route change
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [pathname]);
 
   const handleLogout = () => {
     logoutAdmin();
@@ -176,6 +168,7 @@ export default function AdminLayout({
                       <Link
                         key={item.href}
                         href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                           isActive 
                             ? "bg-dezprox-primary text-white shadow-card" 
