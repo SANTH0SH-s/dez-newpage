@@ -114,26 +114,28 @@ export default function Home() {
       {/* Premium Animated SaaS-Style Background */}
       <PremiumBackground currentStep={currentStep} />
 
-      {/* Premium Header */}
-      <header className="border-b border-gray-100 py-5 bg-white/80 backdrop-blur-md sticky top-0 z-30 px-4 print:hidden relative">
-        <div className="max-w-[1280px] mx-auto flex items-center justify-between">
-          <DezproxLogo showTagline={true} />
+      {/* Premium Header (Hidden on final consultation / proposal step) */}
+      {currentStep !== 4 && (
+        <header className="border-b border-gray-100 py-5 bg-white/80 backdrop-blur-md sticky top-0 z-30 px-4 print:hidden relative">
+          <div className="max-w-[1280px] mx-auto flex items-center justify-between">
+            <DezproxLogo showTagline={true} />
 
-          <div className="flex items-center space-x-6 text-sm font-sans font-bold text-gray-500">
-            <span className="hidden md:inline-flex items-center gap-1.5 hover:text-dezprox-primary transition-colors cursor-pointer">
-              <ShieldCheck className="w-4 h-4 text-dezprox-accent" />
-              Secure Data Guarantee
-            </span>
-            <Link 
-              href="/admin" 
-              className="inline-flex items-center gap-1.5 text-dezprox-primary hover:text-dezprox-accent transition-colors border border-gray-200 hover:border-dezprox-accent/20 bg-white/50 hover:bg-dezprox-accent/5 px-4 py-2 rounded-full text-xs transition-all shadow-sm"
-            >
-              <Settings className="w-3.5 h-3.5 text-dezprox-accent" />
-              Admin Portal
-            </Link>
+            <div className="flex items-center space-x-6 text-sm font-sans font-bold text-gray-500">
+              <span className="hidden md:inline-flex items-center gap-1.5 hover:text-dezprox-primary transition-colors cursor-pointer">
+                <ShieldCheck className="w-4 h-4 text-dezprox-accent" />
+                Secure Data Guarantee
+              </span>
+              <Link 
+                href="/admin" 
+                className="inline-flex items-center gap-1.5 text-dezprox-primary hover:text-dezprox-accent transition-colors border border-gray-200 hover:border-dezprox-accent/20 bg-white/50 hover:bg-dezprox-accent/5 px-4 py-2 rounded-full text-xs transition-all shadow-sm"
+              >
+                <Settings className="w-3.5 h-3.5 text-dezprox-accent" />
+                Admin Portal
+              </Link>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Main Flow Orchestrator */}
       <main className="flex-1 w-full flex flex-col items-center relative z-10">
