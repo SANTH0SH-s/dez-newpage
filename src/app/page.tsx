@@ -28,6 +28,7 @@ export default function Home() {
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, Record<string, any>>>({});
   const [contactData, setContactData] = useState<ContactData | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Project-wide multipliers state
   const [projectModifiers, setProjectModifiers] = useState({
@@ -114,8 +115,8 @@ export default function Home() {
       {/* Premium Animated SaaS-Style Background */}
       <PremiumBackground currentStep={currentStep} />
 
-      {/* Premium Header (Hidden on final consultation / proposal step) */}
-      {currentStep !== 4 && (
+      {/* Premium Header (Hidden only when modal is active) */}
+      {!isModalOpen && (
         <header className="border-b border-gray-100 py-5 bg-white/80 backdrop-blur-md sticky top-0 z-30 px-4 print:hidden relative">
           <div className="max-w-[1280px] mx-auto flex items-center justify-between">
             <DezproxLogo showTagline={true} />
@@ -268,6 +269,7 @@ export default function Home() {
                   onBack={() => setCurrentStep(3)}
                   projectModifiers={projectModifiers}
                   onContactSave={(data) => setContactData(data)}
+                  onModalStateChange={(isOpen) => setIsModalOpen(isOpen)}
                 />
               </motion.div>
             )}

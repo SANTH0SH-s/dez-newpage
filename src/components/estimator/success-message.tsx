@@ -40,6 +40,7 @@ interface SuccessMessageProps {
   onBack?: () => void;
   projectModifiers?: { complexity?: string; urgency?: string; quality?: string };
   onContactSave?: (data: ContactData) => void;
+  onModalStateChange?: (isOpen: boolean) => void;
 }
 
 export const SuccessMessage = ({
@@ -49,7 +50,8 @@ export const SuccessMessage = ({
   onReset,
   onBack,
   projectModifiers = { complexity: "simple", urgency: "normal", quality: "standard" },
-  onContactSave
+  onContactSave,
+  onModalStateChange
 }: SuccessMessageProps) => {
   const [mounted, setMounted] = useState(false);
   const [currency, setCurrency] = useState("₹");
@@ -59,6 +61,10 @@ export const SuccessMessage = ({
   // Lead Generation Modals / Forms States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalAction, setModalAction] = useState<"pdf" | "consultation" | "email" | "callback" | null>(null);
+
+  useEffect(() => {
+    onModalStateChange?.(isModalOpen);
+  }, [isModalOpen, onModalStateChange]);
   
   // Local form inputs
   const [localName, setLocalName] = useState("");
