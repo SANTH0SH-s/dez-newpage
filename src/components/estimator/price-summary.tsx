@@ -233,14 +233,14 @@ export const PriceSummary = ({
                 animate={{ opacity: 0.5 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setIsMobileOpen(false)}
-                className="fixed inset-0 bg-black z-45 print:hidden"
+                className="fixed inset-0 bg-black z-[80] print:hidden"
               />
               <motion.div 
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
                 transition={{ type: "spring", damping: 25, stiffness: 280 }}
-                className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 rounded-t-3xl z-50 p-6 max-h-[85vh] overflow-y-auto shadow-2xl font-sans print:hidden"
+                className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 rounded-t-3xl z-[90] p-6 max-h-[85vh] overflow-y-auto shadow-2xl font-sans print:hidden"
               >
                 {/* Drag Handle Icon Indicator */}
                 <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4 cursor-pointer" onClick={() => setIsMobileOpen(false)} />

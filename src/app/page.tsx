@@ -115,7 +115,7 @@ export default function Home() {
       <PremiumBackground currentStep={currentStep} />
 
       {/* Premium Header */}
-      <header className="border-b border-gray-100 py-5 bg-white/80 backdrop-blur-md sticky top-0 z-50 px-4 print:hidden relative">
+      <header className="border-b border-gray-100 py-5 bg-white/80 backdrop-blur-md sticky top-0 z-30 px-4 print:hidden relative">
         <div className="max-w-[1280px] mx-auto flex items-center justify-between">
           <DezproxLogo showTagline={true} />
 
