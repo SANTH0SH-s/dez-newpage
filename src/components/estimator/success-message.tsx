@@ -646,28 +646,28 @@ export const SuccessMessage = ({
       {/* LEAD CAPTURE MODAL DIALOG */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:hidden">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto print:hidden">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-gray-100"
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl relative border border-gray-100 max-h-[90vh] overflow-y-auto my-auto"
             >
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="absolute right-4 top-4 p-1 text-gray-400 hover:text-dezprox-primary transition-colors cursor-pointer"
+                className="absolute right-4 top-4 p-1 text-gray-400 hover:text-dezprox-primary transition-colors cursor-pointer rounded-lg hover:bg-gray-100"
               >
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="mb-4">
-                <span className="text-[8px] font-black tracking-widest text-dezprox-accent uppercase block">
+              <div className="mb-4 pr-6">
+                <span className="text-[9px] font-black tracking-widest text-dezprox-accent uppercase block">
                   Lead Details Required
                 </span>
-                <h3 className="text-base font-extrabold text-dezprox-primary mt-1">
+                <h3 className="text-base sm:text-lg font-extrabold text-dezprox-primary mt-1">
                   Complete Scope Reservation
                 </h3>
-                <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
+                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
                   Provide your contact details to authorize the proposal file and reserve consultation sessions.
                 </p>
               </div>

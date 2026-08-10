@@ -227,8 +227,8 @@ export const DynamicForm = ({
                 </h4>
 
                 <div className="border border-gray-150 rounded-2xl overflow-hidden bg-white shadow-sm pt-2 w-full">
-                  <div className="w-full overflow-hidden">
-                    <table className="w-full text-left border-collapse text-xs table-fixed" style={{ tableLayout: "fixed" }}>
+                  <div className="w-full overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs min-w-[580px] table-fixed" style={{ tableLayout: "fixed" }}>
                       <thead>
                         {/* Badges Row */}
                         <tr className="bg-gray-50">
@@ -857,11 +857,11 @@ export const DynamicForm = ({
       })}
 
       {/* Form Controls */}
-      <div className="mt-12 flex items-center justify-between border-t border-gray-100 pt-8 gap-4">
+      <div className="mt-12 flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-t border-gray-100 pt-8 gap-4">
         <Button
           variant="outline"
           onClick={onBack}
-          className="flex items-center gap-2 cursor-pointer text-xs font-bold py-2.5 px-4 rounded-xl"
+          className="flex items-center justify-center gap-2 cursor-pointer text-xs font-bold py-3 px-4 rounded-xl w-full sm:w-auto"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Service Selection
@@ -871,7 +871,7 @@ export const DynamicForm = ({
           variant={isAnyPackageMissing ? "outline" : "accent"}
           disabled={isAnyPackageMissing}
           onClick={handleNextStep}
-          className="flex items-center gap-2 cursor-pointer text-xs font-bold py-2.5 px-5 rounded-xl"
+          className="flex items-center justify-center gap-2 cursor-pointer text-xs font-bold py-3 px-5 rounded-xl w-full sm:w-auto"
         >
           <span>Review Cost Estimate</span>
           <ArrowRight className="w-4 h-4" />
