@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { getIcon } from "@/data/servicesData";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, ArrowRight } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import { motion, Variants } from "framer-motion";
-import { getServices, getGlobalSettings, Service } from "@/lib/db";
+import { getServices, getGlobalSettings } from "@/lib/db";
 
 const containerVariants: Variants = {
   hidden: {},
@@ -36,8 +36,51 @@ interface ServiceSelectorProps {
 }
 
 export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: ServiceSelectorProps) => {
-  const [services] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices().filter((s) => s.status === "active") : []));
-  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const services = useMemo(() => {
+    return mounted ? getServices().filter((s) => s.status === "active") : [];
+  }, [mounted]);
+
+  const currency = useMemo(() => {
+    return mounted ? getGlobalSettings().currency : "₹";
+  }, [mounted]);
+
+  if (!mounted) {
+    return (
+      <div className="w-full max-w-[1280px] mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+          <div className="space-y-2">
+            <div className="h-8 w-64 bg-gray-200 rounded animate-pulse" />
+            <div className="h-4 w-96 bg-gray-150 rounded animate-pulse" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="h-64 rounded-xl border border-gray-100 bg-gray-50/50 p-6 space-y-4 animate-pulse">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 rounded-xl bg-gray-200" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-5 w-32 bg-gray-200 rounded" />
+                  <div className="h-3 w-20 bg-gray-200 rounded" />
+                </div>
+              </div>
+              <div className="space-y-2 pt-2">
+                <div className="h-4 bg-gray-200 rounded w-full" />
+                <div className="h-4 bg-gray-200 rounded w-5/6" />
+                <div className="h-4 bg-gray-200 rounded w-2/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const handleToggle = (id: string) => {
     if (selectedServiceIds.includes(id)) {

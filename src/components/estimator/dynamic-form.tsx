@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Radio } from "@/components/ui/radio";
 import { Card } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import * as Icons from "lucide-react";
 import { ArrowLeft, ArrowRight, Cog } from "lucide-react";
 import { twMerge } from "tailwind-merge";
-import { getServices, getGlobalSettings, Service, Question, PricingComponent, Package } from "@/lib/db";
+import { getServices, getGlobalSettings, Question, PricingComponent, Package } from "@/lib/db";
 
 interface DynamicFormProps {
   selectedServiceIds: string[];
@@ -24,10 +24,21 @@ export const DynamicForm = ({
   onBack,
   onNext
 }: DynamicFormProps) => {
-  const [services] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices() : []));
-  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
-
+  const [mounted, setMounted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const services = useMemo(() => {
+    return mounted ? getServices() : [];
+  }, [mounted]);
+
+  const currency = useMemo(() => {
+    return mounted ? getGlobalSettings().currency : "₹";
+  }, [mounted]);
 
   // Auto-select first active package for all selected services if none is selected yet
   useEffect(() => {
@@ -46,24 +57,51 @@ export const DynamicForm = ({
 
   const activeServices = services.filter((s) => selectedServiceIds.includes(s.id));
 
-  if (activeServices.length === 0) return null;
+  if (!mounted) {
+    return (
+      <div className="w-full max-w-[1280px] mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4 animate-pulse">
+          <div className="space-y-2">
+            <div className="h-8 w-64 bg-gray-200 rounded" />
+            <div className="h-4 w-96 bg-gray-150 rounded" />
+          </div>
+        </div>
+        <div className="h-96 rounded-xl border border-gray-100 bg-gray-50/50 p-6 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (activeServices.length === 0) {
+    return (
+      <div className="w-full max-w-[1280px] mx-auto px-4 py-16 text-center font-sans">
+        <Icons.Inbox className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+        <h3 className="text-lg font-bold text-dezprox-primary">No Configured Services Found</h3>
+        <p className="text-gray-500 text-sm mt-2">Please go back and select at least one service to configure.</p>
+        <Button onClick={onBack} className="mt-6 flex items-center justify-center gap-2 mx-auto cursor-pointer" variant="outline">
+          <ArrowLeft className="w-4 h-4" /> Go Back
+        </Button>
+      </div>
+    );
+  }
 
   const handleNextStep = () => {
-    if (!validateQuestions()) {
+    const errors = validateQuestions();
+    setFieldErrors(errors);
+    
+    const errorKeys = Object.keys(errors);
+    if (errorKeys.length > 0) {
       // Scroll to the first error
-      const firstErrorKey = Object.keys(fieldErrors)[0];
-      if (firstErrorKey) {
-        const element = document.getElementById(`field-container-${firstErrorKey}`);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
+      const firstErrorKey = errorKeys[0];
+      const element = document.getElementById(`field-container-${firstErrorKey}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
       }
       return;
     }
     onNext();
   };
 
-  const validateQuestions = (): boolean => {
+  const validateQuestions = (): Record<string, string> => {
     const newErrors: Record<string, string> = {};
     
     selectedServiceIds.forEach((serviceId) => {
@@ -144,8 +182,7 @@ export const DynamicForm = ({
       });
     });
     
-    setFieldErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return newErrors;
   };
 
   const handleOptionToggle = (serviceId: string, questionId: string, optionValue: string, isCheckbox: boolean) => {

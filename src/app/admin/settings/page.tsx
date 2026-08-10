@@ -13,8 +13,33 @@ import {
 import { Save, Check, RefreshCw } from "lucide-react";
 
 export default function GlobalSettingsView() {
-  const [settings, setSettings] = useState<GlobalSettings | null>(() => (typeof window !== "undefined" ? getGlobalSettings() : null));
+  const [settings, setSettings] = useState<GlobalSettings | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    const data = getGlobalSettings();
+    const timer = setTimeout(() => {
+      setSettings(data);
+      setMounted(true);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!mounted || !settings) {
+    return (
+      <div className="space-y-8 font-sans">
+        <div className="space-y-2">
+          <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
+          <div className="h-4 w-72 bg-gray-150 rounded animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="h-64 bg-gray-50/50 border border-gray-100 rounded-xl animate-pulse" />
+          <div className="h-64 bg-gray-50/50 border border-gray-100 rounded-xl animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   const handleInputChange = (field: keyof GlobalSettings, value: unknown) => {
     if (!settings) return;
@@ -61,7 +86,6 @@ export default function GlobalSettingsView() {
     }
   };
 
-  if (!settings) return null;
 
   return (
     <div className="space-y-8 font-sans">

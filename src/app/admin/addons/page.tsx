@@ -279,7 +279,7 @@ export default function AddonManager() {
       <AnimatePresence>
         {isEditorOpen && editingComponent && (
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-card max-w-lg w-full p-6 shadow-2xl relative border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white rounded-card max-w-lg w-full p-6 shadow-2xl relative border border-gray-100 animate-in fade-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh]">
               <button 
                 onClick={() => setIsEditorOpen(false)}
                 className="absolute right-4 top-4 p-1 text-gray-400 hover:text-dezprox-primary transition-colors cursor-pointer"
