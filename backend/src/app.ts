@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { env } from "./config/env";
 import { errorHandler } from "./middleware/error.middleware";
+import publicRouter from "./routes/public.routes";
 
 const app = express();
 
@@ -28,6 +29,9 @@ v1Router.get("/health", (req, res) => {
     },
   });
 });
+
+// Mount Public Routes
+v1Router.use("/", publicRouter);
 
 app.use("/api/v1", v1Router);
 

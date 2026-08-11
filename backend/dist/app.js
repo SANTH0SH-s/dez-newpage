@@ -8,6 +8,7 @@ const cors_1 = __importDefault(require("cors"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const env_1 = require("./config/env");
 const error_middleware_1 = require("./middleware/error.middleware");
+const public_routes_1 = __importDefault(require("./routes/public.routes"));
 const app = (0, express_1.default)();
 // Middlewares
 app.use((0, cors_1.default)({
@@ -29,6 +30,8 @@ v1Router.get("/health", (req, res) => {
         },
     });
 });
+// Mount Public Routes
+v1Router.use("/", public_routes_1.default);
 app.use("/api/v1", v1Router);
 // Centralized error handling
 app.use(error_middleware_1.errorHandler);
