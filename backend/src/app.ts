@@ -4,6 +4,8 @@ import cookieParser from "cookie-parser";
 import { env } from "./config/env";
 import { errorHandler } from "./middleware/error.middleware";
 import publicRouter from "./routes/public.routes";
+import authRouter from "./routes/auth.routes";
+import adminRouter from "./routes/admin.routes";
 
 const app = express();
 
@@ -32,6 +34,10 @@ v1Router.get("/health", (req, res) => {
 
 // Mount Public Routes
 v1Router.use("/", publicRouter);
+
+// Mount Auth and Admin Routes
+v1Router.use("/auth", authRouter);
+v1Router.use("/admin", adminRouter);
 
 app.use("/api/v1", v1Router);
 

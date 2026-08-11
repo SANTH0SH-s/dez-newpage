@@ -14,6 +14,7 @@ const envSchema = zod_1.z.object({
     PORT: zod_1.z.coerce.number().default(5000),
     NODE_ENV: zod_1.z.enum(["development", "production", "test"]).default("development"),
     JWT_SECRET: zod_1.z.string().min(8),
+    JWT_EXPIRES_IN: zod_1.z.string().default("24h"),
     CORS_ORIGIN: zod_1.z.string().default("http://localhost:3000"),
     ADMIN_EMAIL: zod_1.z.string().email(),
     ADMIN_PASSWORD: zod_1.z.string().min(8),

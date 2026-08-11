@@ -6,6 +6,7 @@ const library_1 = require("@prisma/client/runtime/library");
  * Recursively converts Decimal values to numbers and maps uppercase Prisma enums
  * to the lowercase formats expected by the frontend.
  */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 function serializeData(val) {
     if (val === null || val === undefined) {
         return val;
@@ -58,3 +59,4 @@ function serializeData(val) {
     }
     return val;
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
