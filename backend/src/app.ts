@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 import { env } from "./config/env";
 import { errorHandler } from "./middleware/error.middleware";
 import publicRouter from "./routes/public.routes";
@@ -10,8 +11,13 @@ import estimateRouter from "./routes/estimate.routes";
 import enquiryRouter from "./routes/enquiry.routes";
 
 const app = express();
+app.disable("x-powered-by");
 
 // Middlewares
+app.use(helmet({
+  contentSecurityPolicy: false,
+  hsts: env.NODE_ENV === "production" ? { maxAge: 31536000, includeSubDomains: true } : false,
+}));
 app.use(cors({
   origin: env.CORS_ORIGIN,
   credentials: true,
