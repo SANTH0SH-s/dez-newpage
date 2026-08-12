@@ -1,26 +1,24 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
-import { 
-  getServices, 
-  saveServices, 
-  getGlobalSettings,
-  Service,
-  Package 
-} from "@/lib/db";
+import { Service, Package } from "@/lib/types";
 import { Plus, Edit, Trash2, Copy, X, Save, Layers, GripVertical } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { endpoints } from "@/lib/api/endpoints";
 
 export default function PackageBuilder() {
-  const [services, setServices] = useState<Service[]>(() => getServices());
-  const [selectedServiceId, setSelectedServiceId] = useState<string>(() => getServices()[0]?.id || "website-dev");
-  const [currency] = useState(() => getGlobalSettings().currency || "₹");
+  const [services, setServices] = useState<Service[]>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [packagesLoading, setPackagesLoading] = useState(false);
+  const [currency, setCurrency] = useState("₹");
   
   // Editor/Modal states
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -31,21 +29,51 @@ export default function PackageBuilder() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const activeService = services.find((s) => s.id === selectedServiceId);
-  const packages = activeService?.packages || [];
-  
-  // Sort packages by displayOrder
   const sortedPackages = [...packages].sort((a, b) => a.displayOrder - b.displayOrder);
 
-  const updateServicePackages = (updatedPkgs: Package[]) => {
-    if (!activeService) return;
-    const updatedServices = services.map((s) => 
-      s.id === activeService.id 
-        ? { ...s, packages: updatedPkgs } 
-        : s
-    );
-    setServices(updatedServices);
-    saveServices(updatedServices);
+  const fetchServices = async () => {
+    try {
+      setLoading(true);
+      const res = await endpoints.adminGetServices();
+      if (res.success && res.data && res.data.length > 0) {
+        setServices(res.data);
+        setSelectedServiceId(res.data[0].id);
+      }
+      const settingsRes = await endpoints.adminGetSettings();
+      if (settingsRes.success && settingsRes.data) {
+        setCurrency(settingsRes.data.currency);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const fetchPackages = async (serviceId: string) => {
+    if (!serviceId) return;
+    try {
+      setPackagesLoading(true);
+      const res = await endpoints.adminGetPackages(serviceId);
+      if (res.success && res.data) {
+        setPackages(res.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setPackagesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
+  useEffect(() => {
+    if (selectedServiceId) {
+      fetchPackages(selectedServiceId);
+    }
+  }, [selectedServiceId]);
 
   const handleOpenAdd = () => {
     setEditingPackage({
@@ -72,56 +100,64 @@ export default function PackageBuilder() {
     setIsEditorOpen(true);
   };
 
-  const handleDelete = (pkgId: string) => {
+  const handleDelete = async (pkgId: string) => {
     if (confirm("Are you sure you want to delete this package?")) {
-      const updated = packages
-        .filter((p) => p.id !== pkgId)
-        .map((p, idx) => ({ ...p, displayOrder: idx })); // Adjust orders
-      updateServicePackages(updated);
+      try {
+        await endpoints.adminDeletePackage(pkgId);
+        fetchPackages(selectedServiceId);
+      } catch (err: any) {
+        console.error(err);
+        alert(`Failed to delete package: ${err.message || err}`);
+      }
     }
   };
 
-  const handleDuplicate = (pkg: Package) => {
-    const duplicatedPkg: Package = {
-      ...pkg,
-      id: `${pkg.id}-copy-${packages.length + 1}`,
-      name: `${pkg.name} (Copy)`,
-      displayOrder: packages.length,
-      isRecommended: false,
-      isPopular: false,
-      isBestValue: false,
-      isNew: false
-    };
-    const updated = [...packages, duplicatedPkg];
-    updateServicePackages(updated);
+  const handleDuplicate = async (pkg: Package) => {
+    try {
+      const duplicatedPkg = {
+        ...pkg,
+        id: `pkg-${Math.floor(1000 + Math.random() * 9000)}`,
+        name: `${pkg.name} (Copy)`,
+        displayOrder: packages.length,
+        isRecommended: false,
+        isPopular: false,
+        isBestValue: false,
+        isNew: false
+      };
+      await endpoints.adminCreatePackage(selectedServiceId, duplicatedPkg);
+      fetchPackages(selectedServiceId);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Failed to duplicate package: ${err.message || err}`);
+    }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeService || !editingPackage?.id || !editingPackage.name) return;
+    if (!selectedServiceId || !editingPackage?.id || !editingPackage.name) return;
 
-    let updatedPkgs = [...packages];
-    const index = packages.findIndex((p) => p.id === editingPackage.id);
+    try {
+      const isNewPkg = !packages.some((p) => p.id === editingPackage.id);
+      
+      // Enforce recommended constraint locally if recommended
+      if (editingPackage.isRecommended) {
+        const others = packages.filter((p) => p.id !== editingPackage.id && p.isRecommended);
+        await Promise.all(others.map(o => endpoints.adminUpdatePackage(o.id, { isRecommended: false })));
+      }
 
-    // Enforce that only one package can be recommended
-    if (editingPackage.isRecommended) {
-      updatedPkgs = updatedPkgs.map((p) => 
-        p.id === editingPackage.id ? p : { ...p, isRecommended: false }
-      );
+      if (isNewPkg) {
+        await endpoints.adminCreatePackage(selectedServiceId, editingPackage);
+      } else {
+        await endpoints.adminUpdatePackage(editingPackage.id, editingPackage);
+      }
+
+      fetchPackages(selectedServiceId);
+      setIsEditorOpen(false);
+      setEditingPackage(null);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Failed to save package: ${err.message || err}`);
     }
-
-    if (index > -1) {
-      updatedPkgs[index] = editingPackage as Package;
-    } else {
-      updatedPkgs.push(editingPackage as Package);
-    }
-
-    // Re-index displayOrder just in case
-    updatedPkgs = updatedPkgs.map((p, idx) => ({ ...p, displayOrder: p.displayOrder ?? idx }));
-
-    updateServicePackages(updatedPkgs);
-    setIsEditorOpen(false);
-    setEditingPackage(null);
   };
 
   const handleAddFeature = () => {
@@ -157,25 +193,37 @@ export default function PackageBuilder() {
     setDraggedIndex(idx);
   };
 
-  const handleDragOver = (e: React.DragEvent, idx: number) => {
+  const handleDragOver = async (e: React.DragEvent, idx: number) => {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === idx) return;
 
-    // Rearrange packages display order locally for visual responsiveness
     const reordered = [...sortedPackages];
     const draggedItem = reordered[draggedIndex];
     reordered.splice(draggedIndex, 1);
     reordered.splice(idx, 0, draggedItem);
 
-    // Save Display orders
+    // Save display orders
     const updated = reordered.map((p, i) => ({ ...p, displayOrder: i }));
+    setPackages(updated); // responsive optimistic update
     setDraggedIndex(idx);
-    updateServicePackages(updated);
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = async () => {
     setDraggedIndex(null);
+    try {
+      await Promise.all(packages.map(p => endpoints.adminUpdatePackage(p.id, { displayOrder: p.displayOrder })));
+    } catch (err) {
+      console.error("Failed to persist display order:", err);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dezprox-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 font-sans">
@@ -225,7 +273,11 @@ export default function PackageBuilder() {
             </Button>
           </CardHeader>
           <CardContent className="p-6">
-            {sortedPackages.length === 0 ? (
+            {packagesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dezprox-primary" />
+              </div>
+            ) : sortedPackages.length === 0 ? (
               <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-xl">
                 <Layers className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                 <p className="text-sm font-semibold text-gray-400">No packages configured.</p>
@@ -234,9 +286,8 @@ export default function PackageBuilder() {
             ) : (
               <div className="space-y-3">
                 {sortedPackages.map((pkg, idx) => (
-                  <motion.div
+                  <div
                     key={pkg.id}
-                    layoutId={pkg.id}
                     className={`flex items-center justify-between border rounded-xl p-4 bg-white transition-shadow ${
                       pkg.status === "inactive" ? "border-gray-100 opacity-60" : "border-gray-150 hover:shadow-sm"
                     }`}
@@ -301,21 +352,21 @@ export default function PackageBuilder() {
                         </button>
                         <button
                           onClick={() => handleOpenEdit(pkg)}
-                          className="p-1.5 border border-gray-150 text-gray-500 hover:text-dezprox-primary rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                          className="p-1.5 border border-gray-150 text-gray-400 hover:text-dezprox-primary rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
                           title="Edit Package"
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDelete(pkg.id)}
-                          className="p-1.5 border border-red-500/10 text-red-500 hover:text-red-650 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                          className="p-1.5 border border-red-100 text-red-500 rounded-lg hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                           title="Delete Package"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             )}
@@ -323,213 +374,192 @@ export default function PackageBuilder() {
         </Card>
       )}
 
-      {/* CRUD Overlay Modal Dialog */}
-      <AnimatePresence>
-        {isEditorOpen && editingPackage && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="bg-white rounded-card max-w-xl w-full p-6 shadow-2xl relative border border-gray-100 overflow-y-auto max-h-[90vh]"
+      {/* Package Editor Modal */}
+      {isEditorOpen && editingPackage && (
+        <div className="fixed inset-0 bg-black/35 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-card max-w-lg w-full p-6 shadow-2xl relative border border-gray-100 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <button 
+              onClick={() => setIsEditorOpen(false)}
+              className="absolute right-4 top-4 p-1 text-gray-400 hover:text-dezprox-primary transition-colors cursor-pointer"
             >
-              <button 
-                onClick={() => setIsEditorOpen(false)}
-                className="absolute right-4 top-4 p-1 text-gray-400 hover:text-dezprox-primary transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <X className="w-5 h-5" />
+            </button>
 
-              <h3 className="text-lg font-bold text-dezprox-primary mb-5">
-                {packages.some(p => p.id === editingPackage.id) ? "Modify Package Details" : "Construct Package Tier"}
-              </h3>
+            <h3 className="text-lg font-bold text-dezprox-primary mb-4">
+              {packages.some(p => p.id === editingPackage.id) ? "Modify Pricing Tier" : "Add New Tier Plan"}
+            </h3>
 
-              <form onSubmit={handleSave} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Name */}
-                  <div className="space-y-1 col-span-2 md:col-span-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Package Name</label>
-                    <Input
-                      required
-                      placeholder="e.g. Standard"
-                      value={editingPackage.name || ""}
-                      onChange={(e) => setEditingPackage({ ...editingPackage, name: e.target.value })}
-                    />
-                  </div>
+            <form onSubmit={handleSave} className="space-y-4">
+              {/* Name */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Package Name</label>
+                <Input
+                  required
+                  placeholder="e.g. Enterprise Suite"
+                  value={editingPackage.name || ""}
+                  onChange={(e) => setEditingPackage({ ...editingPackage, name: e.target.value })}
+                />
+              </div>
 
-                  {/* Price */}
-                  <div className="space-y-1 col-span-2 md:col-span-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Price ({currency})</label>
-                    <Input
-                      type="number"
-                      required
-                      min="0"
-                      value={editingPackage.price || 0}
-                      onChange={(e) => setEditingPackage({ ...editingPackage, price: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Timeline */}
-                  <div className="space-y-1 col-span-2 md:col-span-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Estimated Timeline</label>
-                    <Input
-                      required
-                      placeholder="e.g. 2-3 weeks, Monthly"
-                      value={editingPackage.timeline || ""}
-                      onChange={(e) => setEditingPackage({ ...editingPackage, timeline: e.target.value })}
-                    />
-                  </div>
-
-                  {/* Status */}
-                  <div className="space-y-1 col-span-2 md:col-span-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Status</label>
-                    <Select
-                      options={[
-                        { value: "active", label: "Active" },
-                        { value: "inactive", label: "Inactive" },
-                      ]}
-                      value={editingPackage.status || "active"}
-                      onChange={(e) => setEditingPackage({ ...editingPackage, status: e.target.value as "active" | "inactive" })}
-                    />
-                  </div>
-                </div>
-
-                {/* Badge Toggles */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 p-3.5 rounded-xl border border-gray-100">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="isRecommended"
-                      checked={editingPackage.isRecommended || false}
-                      onChange={(e) => setEditingPackage({ ...editingPackage, isRecommended: e.target.checked })}
-                      className="rounded text-dezprox-primary focus:ring-dezprox-primary w-4 h-4 border-gray-300"
-                    />
-                    <label htmlFor="isRecommended" className="text-[10px] font-black uppercase text-gray-600 cursor-pointer select-none">
-                      Recommended
-                    </label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="isPopular"
-                      checked={editingPackage.isPopular || false}
-                      onChange={(e) => setEditingPackage({ ...editingPackage, isPopular: e.target.checked })}
-                      className="rounded text-dezprox-primary focus:ring-dezprox-primary w-4 h-4 border-gray-300"
-                    />
-                    <label htmlFor="isPopular" className="text-[10px] font-black uppercase text-gray-600 cursor-pointer select-none">
-                      Popular
-                    </label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="isBestValue"
-                      checked={editingPackage.isBestValue || false}
-                      onChange={(e) => setEditingPackage({ ...editingPackage, isBestValue: e.target.checked })}
-                      className="rounded text-dezprox-primary focus:ring-dezprox-primary w-4 h-4 border-gray-300"
-                    />
-                    <label htmlFor="isBestValue" className="text-[10px] font-black uppercase text-gray-600 cursor-pointer select-none">
-                      Best Value
-                    </label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="isNew"
-                      checked={editingPackage.isNew || false}
-                      onChange={(e) => setEditingPackage({ ...editingPackage, isNew: e.target.checked })}
-                      className="rounded text-dezprox-primary focus:ring-dezprox-primary w-4 h-4 border-gray-300"
-                    />
-                    <label htmlFor="isNew" className="text-[10px] font-black uppercase text-gray-600 cursor-pointer select-none">
-                      New
-                    </label>
-                  </div>
-                </div>
-
-                {/* Short Description */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Price */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Short Description</label>
-                  <Textarea
-                    placeholder="Provide a quick overview..."
-                    value={editingPackage.description || ""}
-                    onChange={(e) => setEditingPackage({ ...editingPackage, description: e.target.value })}
-                    rows={2}
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Price ({currency})</label>
+                  <Input
+                    type="number"
+                    required
+                    min="0"
+                    value={editingPackage.price || 0}
+                    onChange={(e) => setEditingPackage({ ...editingPackage, price: parseInt(e.target.value) || 0 })}
                   />
                 </div>
 
-                {/* Features input with tags/chips */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Included Features</label>
-                  
-                  <div className="flex space-x-2">
-                    <Input
-                      placeholder="Add feature (press Enter or comma)"
-                      value={featureInput}
-                      onChange={(e) => setFeatureInput(e.target.value)}
-                      onKeyDown={handleFeatureKeyDown}
-                    />
-                    <Button 
-                      type="button" 
-                      onClick={handleAddFeature}
-                      variant="outline"
-                      className="shrink-0 cursor-pointer text-xs font-bold"
-                    >
-                      Add
-                    </Button>
-                  </div>
-
-                  {/* Rendered Chips list */}
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {editingPackage.features && editingPackage.features.map((feat) => (
-                      <span key={feat} className="inline-flex items-center space-x-1 px-2.5 py-1 bg-dezprox-accent/10 border border-dezprox-accent/25 rounded-full text-[10px] font-bold text-dezprox-primary">
-                        <span>{feat}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFeature(feat)}
-                          className="hover:text-red-500 transition-colors p-0.5 rounded-full"
-                        >
-                          <X className="w-2.5 h-2.5" />
-                        </button>
-                      </span>
-                    ))}
-                    {(!editingPackage.features || editingPackage.features.length === 0) && (
-                      <span className="text-[11px] text-gray-400 italic">No features added yet.</span>
-                    )}
-                  </div>
+                {/* Timeline */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Delivery Timeline</label>
+                  <Input
+                    required
+                    placeholder="e.g. 4-6 weeks"
+                    value={editingPackage.timeline || ""}
+                    onChange={(e) => setEditingPackage({ ...editingPackage, timeline: e.target.value })}
+                  />
                 </div>
+              </div>
 
-                {/* Footer Controls */}
-                <div className="flex justify-end gap-3 pt-5 border-t border-gray-100 mt-6">
+              {/* Badges/Promos */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-150 space-y-2.5">
+                <span className="text-[10px] font-black uppercase text-gray-550 block tracking-wider">Plan Badges & Highlights</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="flex items-center space-x-2 text-xs font-semibold text-dezprox-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={editingPackage.isRecommended || false}
+                      onChange={(e) => setEditingPackage({ ...editingPackage, isRecommended: e.target.checked })}
+                      className="rounded text-dezprox-accent focus:ring-dezprox-accent/20 border-gray-300 w-4 h-4 cursor-pointer"
+                    />
+                    <span>Recommended Plan</span>
+                  </label>
+
+                  <label className="flex items-center space-x-2 text-xs font-semibold text-dezprox-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={editingPackage.isPopular || false}
+                      onChange={(e) => setEditingPackage({ ...editingPackage, isPopular: e.target.checked })}
+                      className="rounded text-dezprox-accent focus:ring-dezprox-accent/20 border-gray-300 w-4 h-4 cursor-pointer"
+                    />
+                    <span>Popular Highlight</span>
+                  </label>
+
+                  <label className="flex items-center space-x-2 text-xs font-semibold text-dezprox-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={editingPackage.isBestValue || false}
+                      onChange={(e) => setEditingPackage({ ...editingPackage, isBestValue: e.target.checked })}
+                      className="rounded text-dezprox-accent focus:ring-dezprox-accent/20 border-gray-300 w-4 h-4 cursor-pointer"
+                    />
+                    <span>Best Value Tag</span>
+                  </label>
+
+                  <label className="flex items-center space-x-2 text-xs font-semibold text-dezprox-primary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={editingPackage.isNew || false}
+                      onChange={(e) => setEditingPackage({ ...editingPackage, isNew: e.target.checked })}
+                      className="rounded text-dezprox-accent focus:ring-dezprox-accent/20 border-gray-300 w-4 h-4 cursor-pointer"
+                    />
+                    <span>New Release Label</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Description</label>
+                <Textarea
+                  placeholder="Provide a summary of who this plan is tailored for..."
+                  value={editingPackage.description || ""}
+                  onChange={(e) => setEditingPackage({ ...editingPackage, description: e.target.value })}
+                  rows={2}
+                />
+              </div>
+
+              {/* Features Builder */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Plan Features & Deliverables</label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Type a feature and press Enter"
+                    value={featureInput}
+                    onChange={(e) => setFeatureInput(e.target.value)}
+                    onKeyDown={handleFeatureKeyDown}
+                  />
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
-                    onClick={() => setIsEditorOpen(false)}
-                    className="cursor-pointer font-bold text-xs"
+                    onClick={handleAddFeature}
+                    className="cursor-pointer font-bold shrink-0"
                   >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="accent"
-                    size="sm"
-                    className="flex items-center gap-2 cursor-pointer font-bold text-xs"
-                  >
-                    <Save className="w-4 h-4" />
-                    Save Package
+                    Add
                   </Button>
                 </div>
-              </form>
-            </motion.div>
+                
+                {/* Features list */}
+                <div className="flex flex-wrap gap-1.5 pt-1.5">
+                  {(editingPackage.features || []).map((feat, idx) => (
+                    <span 
+                      key={idx} 
+                      className="inline-flex items-center pl-2 pr-1 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-dezprox-primary"
+                    >
+                      {feat}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFeature(feat)}
+                        className="ml-1.5 p-0.5 text-gray-400 hover:text-red-500 rounded-md cursor-pointer hover:bg-gray-100"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Visibility Status</label>
+                <Select
+                  options={[
+                    { value: "active", label: "Active & Published" },
+                    { value: "inactive", label: "Inactive (Archived)" },
+                  ]}
+                  value={editingPackage.status || "active"}
+                  onChange={(e) => setEditingPackage({ ...editingPackage, status: e.target.value as "active" | "inactive" })}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditorOpen(false)}
+                  className="cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="accent"
+                  size="sm"
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  Save Changes
+                </Button>
+              </div>
+            </form>
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }

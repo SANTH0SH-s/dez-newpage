@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DezproxLogo } from "@/components/ui/logo";
 import Link from "next/link";
-import { loginAdmin, getCurrentSession } from "@/lib/db";
 import { endpoints } from "@/lib/api/endpoints";
 import { Lock, Mail, ArrowRight, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";

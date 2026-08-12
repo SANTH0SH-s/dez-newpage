@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Check, ArrowRight } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import { motion, Variants } from "framer-motion";
-import { getServices, getGlobalSettings } from "@/lib/db";
+import { Service } from "@/lib/types";
 
 const containerVariants: Variants = {
   hidden: {},
@@ -43,12 +43,26 @@ export const ServiceSelector = ({ selectedServiceIds, onChange, onNext }: Servic
     return () => clearTimeout(timer);
   }, []);
 
-  const services = useMemo(() => {
-    return mounted ? getServices().filter((s) => s.status === "active") : [];
+  const services = useMemo<Service[]>(() => {
+    if (!mounted) return [];
+    const raw = localStorage.getItem("dezprox_services");
+    if (!raw) return [];
+    try {
+      return (JSON.parse(raw) as Service[]).filter((s) => s.status === "active");
+    } catch {
+      return [];
+    }
   }, [mounted]);
 
   const currency = useMemo(() => {
-    return mounted ? getGlobalSettings().currency : "₹";
+    if (!mounted) return "₹";
+    const raw = localStorage.getItem("dezprox_settings");
+    if (!raw) return "₹";
+    try {
+      return JSON.parse(raw).currency || "₹";
+    } catch {
+      return "₹";
+    }
   }, [mounted]);
 
   if (!mounted) {

@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Enquiry, Service } from "@/lib/db";
+import { Enquiry, Service } from "@/lib/types";
 import { endpoints } from "@/lib/api/endpoints";
 import { Search, Trash2, Eye, X, Phone, Mail, Building, Check, Clock } from "lucide-react";
 

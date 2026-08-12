@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { GlobalSettings } from "@/lib/db";
+import { GlobalSettings } from "@/lib/types";
 import { endpoints } from "@/lib/api/endpoints";
 import { Save, Check, RefreshCw } from "lucide-react";
 

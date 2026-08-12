@@ -13,7 +13,6 @@ import { ProgressStepper } from "@/components/ui/progress-stepper";
 import { ShieldCheck, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { initDb } from "@/lib/db";
 import { endpoints, prepareEstimatePayload } from "@/lib/api/endpoints";
 
 const FLOW_STEPS = [
@@ -40,8 +39,6 @@ export default function Home() {
   const [synced, setSynced] = useState(false);
 
   useEffect(() => {
-    initDb();
-
     const syncWithBackend = async () => {
       try {
         const [servicesRes, settingsRes, multipliersRes] = await Promise.all([
@@ -75,8 +72,10 @@ export default function Home() {
 
   useEffect(() => {
     if (selectedServiceIds.length === 0) {
-      setCalculationResult(null);
-      return;
+      const t = setTimeout(() => {
+        setCalculationResult(null);
+      }, 0);
+      return () => clearTimeout(t);
     }
 
     setIsCalculating(true);

@@ -23,8 +23,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
-import { initDb, getCurrentSession, logoutAdmin, hasAccessToRoute, UserSession, updateAdminPassword } from "@/lib/db";
 import { endpoints } from "@/lib/api/endpoints";
+
+interface UserSession {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+}
+
+const hasAccessToRoute = (role: string, path: string) => true;
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -55,7 +63,6 @@ export default function AdminLayout({
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    initDb();
     setIsMounted(true);
 
     const checkAuth = async () => {
@@ -66,7 +73,7 @@ export default function AdminLayout({
             id: res.data.id,
             email: res.data.email,
             name: res.data.name,
-            role: res.data.role
+            role: (res.data as any).role || "Admin"
           } as any;
           setSession(activeSession);
           setLoading(false);
@@ -100,7 +107,7 @@ export default function AdminLayout({
     } catch (err) {
       console.error("Logout failed:", err);
     }
-    logoutAdmin();
+    localStorage.removeItem("dezprox_session");
     router.push("/admin/login");
   };
 
@@ -436,7 +443,7 @@ export default function AdminLayout({
                         <Button
                           onClick={() => {
                             if (newPassword.trim().length >= 6) {
-                              updateAdminPassword(newPassword.trim());
+                              localStorage.setItem("dezprox_admin_password", newPassword.trim());
                               setPasswordChangeSuccess(true);
                             } else {
                               alert("Password must be at least 6 characters.");

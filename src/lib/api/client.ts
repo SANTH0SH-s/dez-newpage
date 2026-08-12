@@ -21,7 +21,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     cache: "no-store",
   });
 
-  let data: any;
+  let data: unknown;
   const contentType = response.headers.get("Content-Type");
   if (contentType && contentType.includes("application/json")) {
     data = await response.json();
@@ -30,21 +30,22 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) {
+    const errData = (data || {}) as { code?: string; message?: string };
     throw new ApiError(
       response.status,
-      data.code || "SERVER_ERROR",
-      data.message || response.statusText || "Something went wrong"
+      errData.code || "SERVER_ERROR",
+      errData.message || response.statusText || "Something went wrong"
     );
   }
 
-  return data;
+  return data as T;
 }
 
 export const api = {
   get: <T>(path: string, options?: RequestInit) => request<T>(path, { ...options, method: "GET" }),
-  post: <T>(path: string, body: any, options?: RequestInit) =>
+  post: <T>(path: string, body: unknown, options?: RequestInit) =>
     request<T>(path, { ...options, method: "POST", body: JSON.stringify(body) }),
-  patch: <T>(path: string, body: any, options?: RequestInit) =>
+  patch: <T>(path: string, body: unknown, options?: RequestInit) =>
     request<T>(path, { ...options, method: "PATCH", body: JSON.stringify(body) }),
   delete: <T>(path: string, options?: RequestInit) => request<T>(path, { ...options, method: "DELETE" }),
 };

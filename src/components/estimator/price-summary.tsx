@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { calculateProjectCosts, TotalCalculationResult } from "@/lib/pricingCalculator";
+import { TotalCalculationResult, GlobalSettings } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ChevronUp, ChevronDown, X, ArrowLeft, ArrowRight } from "lucide-react";
-import { getGlobalSettings, GlobalSettings, addEstimate } from "@/lib/db";
 import { motion, AnimatePresence } from "framer-motion";
 import { twMerge } from "tailwind-merge";
 import { endpoints, prepareEstimatePayload } from "@/lib/api/endpoints";
@@ -71,7 +70,12 @@ export const PriceSummary = ({
   onContactSave,
   calculationResult
 }: PriceSummaryProps) => {
-  const [settings] = useState<GlobalSettings | null>(() => (typeof window !== "undefined" ? getGlobalSettings() : null));
+  const [settings] = useState<GlobalSettings | null>(() => {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem("dezprox_settings");
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  });
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   // Lead Gate local states
@@ -82,13 +86,9 @@ export const PriceSummary = ({
   const currentSettings = settings || { currency: "₹", taxRate: 18, discountRate: 5, gateEstimateWithLeadForm: false };
   const currency = currentSettings.currency;
 
-  const result: TotalCalculationResult = calculationResult || calculateProjectCosts(
-    selectedServiceIds,
-    answers,
-    projectModifiers
-  );
+  const result = calculationResult;
 
-  if (selectedServiceIds.length === 0) {
+  if (selectedServiceIds.length === 0 || !result) {
     return null;
   }
 
@@ -119,21 +119,7 @@ export const PriceSummary = ({
 
     if (onContactSave) onContactSave(data);
 
-    // Save lead to database
-    const rangeText = `${currency}${Math.round(result.estimatedMin).toLocaleString()} - ${currency}${Math.round(result.estimatedMax).toLocaleString()}`;
-    addEstimate({
-      customerName: data.name,
-      customerEmail: data.email,
-      customerPhone: data.phone,
-      customerCompany: data.company,
-      notes: data.notes,
-      serviceNames: result.services.map(s => s.serviceName),
-      totalPrice: grandTotal,
-      status: "pending",
-      breakdown: result,
-      answers: answers,
-      estimateRange: rangeText
-    });
+
 
     const payload = prepareEstimatePayload(selectedServiceIds, answers, projectModifiers, data);
     endpoints.createEstimate(payload).catch((err) => console.error("Failed to create estimate on backend:", err));

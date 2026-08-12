@@ -6,13 +6,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, ArrowLeft, LogOut } from "lucide-react";
-import { logoutAdmin } from "@/lib/db";
 
 export default function UnauthorizedPage() {
   const router = useRouter();
 
   const handleLogout = () => {
-    logoutAdmin();
+    localStorage.removeItem("dezprox_session");
     router.push("/admin/login");
   };
 

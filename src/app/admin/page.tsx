@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -9,18 +9,41 @@ import {
   Clock,
   Flame
 } from "lucide-react";
-import { 
-  getServices, 
-  getEstimates, 
-  getGlobalSettings,
-  Service,
-  Estimate
-} from "@/lib/db";
+import { Service, Estimate } from "@/lib/types";
+import { endpoints } from "@/lib/api/endpoints";
 
 export default function AdminDashboard() {
-  const [services] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices() : []));
-  const [estimates] = useState<Estimate[]>(() => (typeof window !== "undefined" ? getEstimates() : []));
-  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
+  const [services, setServices] = useState<Service[]>([]);
+  const [estimates, setEstimates] = useState<Estimate[]>([]);
+  const [currency, setCurrency] = useState("₹");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [estRes, srvRes, settingsRes] = await Promise.all([
+          endpoints.adminGetEstimates(1, 1000),
+          endpoints.adminGetServices(),
+          endpoints.adminGetSettings()
+        ]);
+        if (estRes.success && estRes.data) {
+          setEstimates(estRes.data.items);
+        }
+        if (srvRes.success && srvRes.data) {
+          setServices(srvRes.data);
+        }
+        if (settingsRes.success && settingsRes.data) {
+          setCurrency(settingsRes.data.currency);
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   const totalServices = services.length;
   const totalEstimates = estimates.length;
@@ -50,6 +73,14 @@ export default function AdminDashboard() {
   const recentEstimates = [...estimates]
     .sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime())
     .slice(0, 6);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dezprox-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 font-sans">

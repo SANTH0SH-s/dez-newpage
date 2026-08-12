@@ -1,19 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
-import { 
-  getServices, 
-  saveServices, 
-  getGlobalSettings,
-  Service 
-} from "@/lib/db";
+import { Service } from "@/lib/types";
 import { getIcon } from "@/data/servicesData";
+import { endpoints } from "@/lib/api/endpoints";
 import { 
   Plus, 
   Edit, 
@@ -25,10 +21,36 @@ import {
 } from "lucide-react";
 
 export default function ServiceManagement() {
-  
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currency, setCurrency] = useState("₹");
+
   // Editor/Modal states
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingService, setEditingService] = useState<Partial<Service> | null>(null);
+
+  const fetchServices = async () => {
+    try {
+      setLoading(true);
+      const res = await endpoints.adminGetServices();
+      if (res.success && res.data) {
+        setServices(res.data);
+      }
+      
+      const settingsRes = await endpoints.adminGetSettings();
+      if (settingsRes.success && settingsRes.data) {
+        setCurrency(settingsRes.data.currency);
+      }
+    } catch (err) {
+      console.error("Failed to load services:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchServices();
+  }, []);
 
   const handleFileChange = (field: "iconImage" | "cardImage" | "heroBanner" | "thumbnail", file: File | null) => {
     if (!file || !editingService) return;
@@ -45,24 +67,28 @@ export default function ServiceManagement() {
     reader.readAsDataURL(file);
   };
 
-  const [services, setServices] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices() : []));
-  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
-
-  const handleToggleStatus = (id: string) => {
-    const list = services.map((s) => 
-      s.id === id 
-        ? { ...s, status: (s.status === "active" ? "inactive" : "active") as "active" | "inactive" } 
-        : s
-    );
-    setServices(list);
-    saveServices(list);
+  const handleToggleStatus = async (id: string) => {
+    const service = services.find((s) => s.id === id);
+    if (!service) return;
+    const newStatus = service.status === "active" ? "inactive" : "active";
+    try {
+      await endpoints.adminUpdateService(id, { status: newStatus });
+      fetchServices();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Failed to update status: ${err.message || err}`);
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this service? This may affect estimates referencing it.")) {
-      const list = services.filter((s) => s.id !== id);
-      setServices(list);
-      saveServices(list);
+      try {
+        await endpoints.adminDeleteService(id);
+        fetchServices();
+      } catch (err: any) {
+        console.error(err);
+        alert(`Failed to delete service: ${err.message || err}`);
+      }
     }
   };
 
@@ -87,24 +113,33 @@ export default function ServiceManagement() {
     setIsEditorOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingService?.name || !editingService.id) return;
 
-    const updatedList = [...services];
-    const index = services.findIndex((s) => s.id === editingService.id);
-    
-    if (index > -1) {
-      updatedList[index] = editingService as Service;
-    } else {
-      updatedList.push(editingService as Service);
+    try {
+      const isNew = !services.some((s) => s.id === editingService.id);
+      if (isNew) {
+        await endpoints.adminCreateService(editingService);
+      } else {
+        await endpoints.adminUpdateService(editingService.id, editingService);
+      }
+      fetchServices();
+      setIsEditorOpen(false);
+      setEditingService(null);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Failed to save service: ${err.message || err}`);
     }
-
-    setServices(updatedList);
-    saveServices(updatedList);
-    setIsEditorOpen(false);
-    setEditingService(null);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dezprox-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 font-sans">

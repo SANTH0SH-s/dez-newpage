@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { calculateProjectCosts } from "@/lib/pricingCalculator";
+import { TotalCalculationResult, GlobalSettings } from "@/lib/types";
 import { Send } from "lucide-react";
-import { getGlobalSettings } from "@/lib/db";
 
 interface ContactFormProps {
   selectedServiceIds: string[];
@@ -16,6 +15,7 @@ interface ContactFormProps {
   onBack: () => void;
   projectModifiers: { complexity: string; urgency: string; quality: string };
   onModifierChange: (name: string, value: string) => void;
+  calculationResult: TotalCalculationResult;
 }
 
 export interface ContactData {
@@ -31,12 +31,18 @@ export const ContactForm = ({
   answers,
   onSubmit,
   onBack,
+  onModifierChange,
   projectModifiers,
-  onModifierChange
+  calculationResult
 }: ContactFormProps) => {
-  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
+  const [currency] = useState(() => {
+    if (typeof window === "undefined") return "₹";
+    const raw = localStorage.getItem("dezprox_settings");
+    if (!raw) return "₹";
+    try { return JSON.parse(raw).currency || "₹"; } catch { return "₹"; }
+  });
 
-  const result = calculateProjectCosts(selectedServiceIds, answers, projectModifiers);
+  const result = calculationResult;
   
   const [formData, setFormData] = useState<ContactData>({
     name: "",
@@ -278,7 +284,7 @@ export const ContactForm = ({
                   Configured Services
                 </span>
                 <ul className="space-y-2">
-                  {result.services.map((srv) => (
+                  {result.services.map((srv: any) => (
                     <li key={srv.serviceId} className="flex justify-between items-center text-sm font-sans text-dezprox-text/75">
                       <span className="truncate pr-4 font-semibold">{srv.serviceName}</span>
                       <span className="font-bold text-dezprox-primary text-xs shrink-0">

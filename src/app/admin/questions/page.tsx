@@ -1,27 +1,23 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { 
-  getServices, 
-  saveServices, 
-  getGlobalSettings,
-  Service,
-  Question,
-  QuestionOption
-} from "@/lib/db";
+import { Service, Question, QuestionOption } from "@/lib/types";
 import { Plus, Edit, Trash2, Copy, X, Save, HelpCircle, GripVertical, Eye } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { endpoints } from "@/lib/api/endpoints";
 
 export default function QuestionnaireBuilder() {
-  const [services, setServices] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices() : []));
-  const [selectedServiceId, setSelectedServiceId] = useState<string>(() => (typeof window !== "undefined" ? getServices()[0]?.id || "website-dev" : "website-dev"));
+  const [services, setServices] = useState<Service[]>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
   const [selectedPackageId, setSelectedPackageId] = useState<string>("general");
-  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
+  const [allQuestions, setAllQuestions] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
+  const [currency, setCurrency] = useState("₹");
   
   // Editor/Modal states
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -46,49 +42,62 @@ export default function QuestionnaireBuilder() {
 
   const getActiveQuestionsList = (): Question[] => {
     if (isPackageContext) {
-      return activePackage?.questions || [];
+      return allQuestions.filter(q => q.packageId === selectedPackageId);
     }
-    return activeService?.questions || [];
+    return allQuestions.filter(q => !q.packageId);
   };
 
   const activeQuestions = getActiveQuestionsList();
   const sortedQuestions = [...activeQuestions].sort((a, b) => a.displayOrder - b.displayOrder);
 
-  // Parent questions options for conditional logic
-  // (Filter out the current question being edited to prevent self-referencing)
   const availableParentQuestions = (isPackageContext 
-    ? [...(activeService?.questions || []), ...(activePackage?.questions || [])]
-    : activeService?.questions || []
+    ? allQuestions
+    : allQuestions.filter(q => !q.packageId)
   ).filter((q) => q.id !== editingQuestion?.id);
 
-  const updateQuestionsDatabase = (updatedQs: Question[]) => {
-    if (!activeService) return;
-    
-    let updatedServices;
-    if (isPackageContext && activePackage) {
-      // Package questions
-      const updatedPackages = packagesList.map((p) => 
-        p.id === activePackage.id 
-          ? { ...p, questions: updatedQs } 
-          : p
-      );
-      updatedServices = services.map((s) => 
-        s.id === activeService.id 
-          ? { ...s, packages: updatedPackages } 
-          : s
-      );
-    } else {
-      // Service questions
-      updatedServices = services.map((s) => 
-        s.id === activeService.id 
-          ? { ...s, questions: updatedQs } 
-          : s
-      );
+  const fetchServices = async () => {
+    try {
+      setLoading(true);
+      const res = await endpoints.adminGetServices();
+      if (res.success && res.data && res.data.length > 0) {
+        setServices(res.data);
+        setSelectedServiceId(res.data[0].id);
+      }
+      const settingsRes = await endpoints.adminGetSettings();
+      if (settingsRes.success && settingsRes.data) {
+        setCurrency(settingsRes.data.currency);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    
-    setServices(updatedServices);
-    saveServices(updatedServices);
   };
+
+  const fetchQuestions = async (serviceId: string) => {
+    if (!serviceId) return;
+    try {
+      setQuestionsLoading(true);
+      const res = await endpoints.adminGetQuestions(serviceId);
+      if (res.success && res.data) {
+        setAllQuestions(res.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setQuestionsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
+  useEffect(() => {
+    if (selectedServiceId) {
+      fetchQuestions(selectedServiceId);
+    }
+  }, [selectedServiceId]);
 
   const handleOpenAdd = () => {
     setEditingQuestion({
@@ -101,60 +110,85 @@ export default function QuestionnaireBuilder() {
       defaultValue: "",
       priceModifier: 0,
       modifierType: "flat",
-      options: [],
-      conditionalParentId: "",
-      conditionalParentValue: "",
-      validationRules: { min: undefined, max: undefined, pattern: "", message: "" }
+      conditionalParentId: null,
+      conditionalParentValue: null,
+      packageId: isPackageContext ? selectedPackageId : null,
+      validationRules: { min: null, max: null, pattern: null, message: null },
+      options: []
     });
+    setOptionValue("");
+    setOptionLabel("");
+    setOptionPrice(0);
+    setOptionType("flat");
+    setOptionDesc("");
     setIsEditorOpen(true);
   };
 
   const handleOpenEdit = (q: Question) => {
     setEditingQuestion({
       ...q,
-      validationRules: q.validationRules || { min: undefined, max: undefined, pattern: "", message: "" }
+      validationRules: q.validationRules || { min: null, max: null, pattern: null, message: null }
     });
+    setOptionValue("");
+    setOptionLabel("");
+    setOptionPrice(0);
+    setOptionType("flat");
+    setOptionDesc("");
     setIsEditorOpen(true);
   };
 
-  const handleDelete = (qId: string) => {
+  const handleDelete = async (qId: string) => {
     if (confirm("Are you sure you want to delete this question?")) {
-      const updated = activeQuestions
-        .filter((q) => q.id !== qId)
-        .map((q, idx) => ({ ...q, displayOrder: idx }));
-      updateQuestionsDatabase(updated);
+      try {
+        await endpoints.adminDeleteQuestion(qId);
+        fetchQuestions(selectedServiceId);
+      } catch (err: any) {
+        console.error(err);
+        alert(`Failed to delete question: ${err.message || err}`);
+      }
     }
   };
 
-  const handleDuplicate = (q: Question) => {
-    const duplicated: Question = {
-      ...q,
-      id: `${q.id}-copy-${activeQuestions.length + 1}`,
-      text: `${q.text} (Copy)`,
-      displayOrder: activeQuestions.length
-    };
-    const updated = [...activeQuestions, duplicated];
-    updateQuestionsDatabase(updated);
+  const handleDuplicate = async (q: Question) => {
+    try {
+      const duplicated: Question = {
+        ...q,
+        id: `q-${Math.floor(1000 + Math.random() * 9000)}`,
+        text: `${q.text} (Copy)`,
+        displayOrder: activeQuestions.length
+      };
+      await endpoints.adminCreateQuestion(selectedServiceId, duplicated);
+      fetchQuestions(selectedServiceId);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Failed to duplicate question: ${err.message || err}`);
+    }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingQuestion?.id || !editingQuestion.text) return;
+    if (!selectedServiceId || !editingQuestion?.id || !editingQuestion.text) return;
 
-    let updatedQs = [...activeQuestions];
-    const index = activeQuestions.findIndex((q) => q.id === editingQuestion.id);
+    try {
+      const isNew = !allQuestions.some((q) => q.id === editingQuestion.id);
+      
+      const payload = {
+        ...editingQuestion,
+        packageId: isPackageContext ? selectedPackageId : null
+      };
 
-    if (index > -1) {
-      updatedQs[index] = editingQuestion as Question;
-    } else {
-      updatedQs.push(editingQuestion as Question);
+      if (isNew) {
+        await endpoints.adminCreateQuestion(selectedServiceId, payload);
+      } else {
+        await endpoints.adminUpdateQuestion(editingQuestion.id, payload);
+      }
+      fetchQuestions(selectedServiceId);
+      setIsEditorOpen(false);
+      setEditingQuestion(null);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Failed to save question: ${err.message || err}`);
     }
-
-    updatedQs = updatedQs.map((q, idx) => ({ ...q, displayOrder: q.displayOrder ?? idx }));
-
-    updateQuestionsDatabase(updatedQs);
-    setIsEditorOpen(false);
-    setEditingQuestion(null);
   };
 
   const handleAddOption = () => {
@@ -181,16 +215,16 @@ export default function QuestionnaireBuilder() {
     setOptionDesc("");
   };
 
-  const handleRemoveOption = (value: string) => {
+  const handleRemoveOption = (index: number) => {
     if (!editingQuestion) return;
     const currentOptions = editingQuestion.options || [];
     setEditingQuestion({
       ...editingQuestion,
-      options: currentOptions.filter((o) => o.value !== value)
+      options: currentOptions.filter((_, idx) => idx !== index)
     });
   };
 
-  // Drag and Drop reordering implementation
+  // Drag and Drop implementation
   const handleDragStart = (idx: number) => {
     setDraggedIndex(idx);
   };
@@ -204,14 +238,31 @@ export default function QuestionnaireBuilder() {
     reordered.splice(draggedIndex, 1);
     reordered.splice(idx, 0, draggedItem);
 
+    // optimistic update display order
     const updated = reordered.map((q, i) => ({ ...q, displayOrder: i }));
+    setAllQuestions(prev => {
+      const untouched = prev.filter(q => !sortedQuestions.some(sq => sq.id === q.id));
+      return [...untouched, ...updated];
+    });
     setDraggedIndex(idx);
-    updateQuestionsDatabase(updated);
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = async () => {
     setDraggedIndex(null);
+    try {
+      await Promise.all(sortedQuestions.map(q => endpoints.adminUpdateQuestion(q.id, { displayOrder: q.displayOrder })));
+    } catch (err) {
+      console.error("Failed to persist question drag order:", err);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dezprox-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 font-sans">
@@ -285,7 +336,11 @@ export default function QuestionnaireBuilder() {
           </CardHeader>
           
           <CardContent className="p-6">
-            {sortedQuestions.length === 0 ? (
+            {questionsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dezprox-primary" />
+              </div>
+            ) : sortedQuestions.length === 0 ? (
               <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-xl">
                 <HelpCircle className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                 <p className="text-sm font-semibold text-gray-400">No questions built for this context.</p>
@@ -294,81 +349,82 @@ export default function QuestionnaireBuilder() {
             ) : (
               <div className="space-y-3">
                 {sortedQuestions.map((q, idx) => (
-                  <motion.div
+                  <div
                     key={q.id}
-                    layoutId={q.id}
                     className="flex items-center justify-between border border-gray-150 rounded-xl p-4 bg-white hover:shadow-sm transition-all"
                     draggable
                     onDragStart={() => handleDragStart(idx)}
                     onDragOver={(e) => handleDragOver(e, idx)}
                     onDragEnd={handleDragEnd}
                   >
-                    <div className="flex items-center space-x-3 flex-1 min-w-0">
-                      {/* Drag Handle */}
-                      <div className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-dezprox-primary p-1.5 rounded transition-colors">
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
+                      <div className="cursor-grab active:cursor-grabbing text-gray-400 p-1 rounded hover:bg-slate-50 shrink-0">
                         <GripVertical className="w-4 h-4" />
                       </div>
 
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center flex-wrap gap-2">
                           <span className="font-bold text-dezprox-primary text-sm">{q.text}</span>
-                          <Badge variant="secondary" className="capitalize text-[9px] py-0.5 font-bold">{q.type}</Badge>
+                          <Badge variant="outline" className="text-[9px] uppercase font-black tracking-wider text-gray-500 py-0.5">{q.type}</Badge>
                           {q.isRequired && (
-                            <Badge variant="outline" className="text-[9px] py-0.5 font-bold border-red-200 text-red-500 bg-red-50/50">Required</Badge>
+                            <Badge variant="secondary" className="text-[9px] font-black uppercase text-red-600 bg-red-50 py-0.5">Required</Badge>
                           )}
                           {q.conditionalParentId && (
-                            <Badge variant="outline" className="text-[9px] py-0.5 font-bold border-indigo-200 text-indigo-500 bg-indigo-50/50 flex items-center gap-1">
-                              <Eye className="w-2.5 h-2.5" /> Conditional
-                            </Badge>
+                            <Badge variant="outline" className="text-[9px] border-amber-200 text-amber-600 bg-amber-50/20 py-0.5">Conditional</Badge>
                           )}
                         </div>
-                        {q.description && <p className="text-xs text-gray-400 truncate mt-1 max-w-lg">{q.description}</p>}
-                        
-                        {/* Option badges if available */}
+                        <p className="text-xs text-gray-400 truncate mt-1">{q.description || "No description provided."}</p>
+
+                        {/* Options preview if applicable */}
                         {q.options && q.options.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-2">
                             {q.options.map((opt, oIdx) => (
-                              <span key={oIdx} className="inline-flex items-center px-2 py-0.5 bg-gray-50 border border-gray-100 rounded text-[9px] font-medium text-dezprox-primary">
-                                {opt.label} ({opt.priceModifier !== 0 ? `${opt.modifierType === "flat" ? "+" : "x"}${opt.priceModifier}` : "Free"})
+                              <span key={oIdx} className="inline-flex items-center px-2 py-0.5 bg-slate-55 border rounded text-[9.5px] font-bold text-dezprox-primary">
+                                {opt.label} 
+                                {opt.priceModifier !== 0 && (
+                                  <span className="text-[8.5px] text-dezprox-accent ml-1 font-black">
+                                    ({opt.priceModifier > 0 ? "+" : ""}{opt.modifierType === "multiplier" ? `x${opt.priceModifier}` : `${currency}${opt.priceModifier.toLocaleString()}`})
+                                  </span>
+                                )}
                               </span>
                             ))}
-                          </div>
-                        )}
-
-                        {/* Flat/Multiplier modifier indicator for non-option types */}
-                        {["counter", "number", "toggle", "text"].includes(q.type) && q.priceModifier !== undefined && q.priceModifier !== 0 && (
-                          <div className="text-[10px] text-gray-500 font-semibold mt-1">
-                            Price impact: {q.modifierType === "flat" ? `+${currency}${q.priceModifier}` : `+${Math.round((q.priceModifier - 1) * 100)}%`} per unit/activation.
                           </div>
                         )}
                       </div>
                     </div>
 
                     <div className="flex items-center space-x-2 pl-4">
-                      <button
-                        onClick={() => handleDuplicate(q)}
-                        className="p-1.5 border border-gray-150 text-gray-400 hover:text-dezprox-primary rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                        title="Duplicate Question"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleOpenEdit(q)}
-                        className="p-1.5 border border-gray-150 text-gray-500 hover:text-dezprox-primary rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                        title="Edit Question"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(q.id)}
-                        className="p-1.5 border border-red-500/10 text-red-500 hover:text-red-650 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
-                        title="Delete Question"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {q.priceModifier !== undefined && q.priceModifier !== null && q.priceModifier !== 0 && (
+                        <span className="text-xs font-bold text-dezprox-accent bg-amber-50/50 border border-amber-100 rounded-md px-2 py-0.5 whitespace-nowrap">
+                          {q.priceModifier > 0 ? "+" : ""}{q.modifierType === "multiplier" ? `x${q.priceModifier}` : `${currency}${q.priceModifier}`}
+                        </span>
+                      )}
+
+                      <div className="flex items-center space-x-0.5">
+                        <button
+                          onClick={() => handleDuplicate(q)}
+                          className="p-1.5 border border-gray-150 text-gray-400 hover:text-dezprox-primary rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                          title="Duplicate"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleOpenEdit(q)}
+                          className="p-1.5 border border-gray-150 text-gray-400 hover:text-dezprox-primary rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                          title="Edit"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(q.id)}
+                          className="p-1.5 border border-red-100 text-red-500 rounded-lg hover:text-red-650 hover:bg-red-50 transition-colors cursor-pointer"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             )}
@@ -376,392 +432,332 @@ export default function QuestionnaireBuilder() {
         </Card>
       )}
 
-      {/* Editor Modal Dialog */}
-      <AnimatePresence>
-        {isEditorOpen && editingQuestion && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="bg-white rounded-card max-w-2xl w-full p-6 shadow-2xl relative border border-gray-100 overflow-y-auto max-h-[90vh]"
+      {/* Question Editor Dialog Modal */}
+      {isEditorOpen && editingQuestion && (
+        <div className="fixed inset-0 bg-black/35 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-card max-w-2xl w-full p-6 shadow-2xl relative border border-gray-100 animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto">
+            <button 
+              onClick={() => setIsEditorOpen(false)}
+              className="absolute right-4 top-4 p-1 text-gray-400 hover:text-dezprox-primary transition-colors cursor-pointer"
             >
-              <button 
-                onClick={() => setIsEditorOpen(false)}
-                className="absolute right-4 top-4 p-1 text-gray-400 hover:text-dezprox-primary transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <X className="w-5 h-5" />
+            </button>
 
-              <h3 className="text-lg font-bold text-dezprox-primary mb-5">
-                {activeQuestions.some(q => q.id === editingQuestion.id) ? "Modify Questionnaire Input" : "Construct Form Input"}
-              </h3>
+            <h3 className="text-lg font-bold text-dezprox-primary mb-4">
+              {allQuestions.some(q => q.id === editingQuestion.id) ? "Modify Questionnaire Step" : "Configure Custom Input"}
+            </h3>
 
-              <form onSubmit={handleSave} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Label */}
-                  <div className="space-y-1 col-span-2 md:col-span-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Question Label</label>
-                    <Input
-                      required
-                      placeholder="e.g. Need domain setup?"
-                      value={editingQuestion.text || ""}
-                      onChange={(e) => setEditingQuestion({ ...editingQuestion, text: e.target.value })}
-                    />
-                  </div>
+            <form onSubmit={handleSave} className="space-y-4">
+              {/* Question Text */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Question Title / Prompt</label>
+                <Input
+                  required
+                  placeholder="e.g. How many user roles do you expect in the system?"
+                  value={editingQuestion.text || ""}
+                  onChange={(e) => setEditingQuestion({ ...editingQuestion, text: e.target.value })}
+                />
+              </div>
 
-                  {/* Input Type */}
-                  <div className="space-y-1 col-span-2 md:col-span-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Question Type</label>
-                    <Select
-                      options={[
-                        { value: "radio", label: "Radio Selection" },
-                        { value: "checkbox", label: "Checkbox Array" },
-                        { value: "select", label: "Select Dropdown" },
-                        { value: "counter", label: "Counter (Unit +/-)" },
-                        { value: "number", label: "Number Input" },
-                        { value: "text", label: "Text Input Box" },
-                        { value: "toggle", label: "Toggle Yes/No Switch" },
-                      ]}
-                      value={editingQuestion.type || "radio"}
-                      onChange={(e) => setEditingQuestion({ ...editingQuestion, type: e.target.value as Question["type"] })}
-                    />
-                  </div>
+              {/* Description */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Description / Contextual Help (Optional)</label>
+                <Input
+                  placeholder="e.g. Administrators, Managers, End Clients, etc."
+                  value={editingQuestion.description || ""}
+                  onChange={(e) => setEditingQuestion({ ...editingQuestion, description: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Input Type */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Field Input Type</label>
+                  <Select
+                    options={[
+                      { value: "radio", label: "Radio (Single Choice)" },
+                      { value: "checkbox", label: "Checkbox (Multi Choice)" },
+                      { value: "select", label: "Select (Dropdown)" },
+                      { value: "counter", label: "Counter (Numeric +/-)" },
+                      { value: "number", label: "Number Input" },
+                      { value: "text", label: "Text Field" },
+                      { value: "toggle", label: "Toggle Switch" },
+                    ]}
+                    value={editingQuestion.type || "radio"}
+                    onChange={(e) => setEditingQuestion({ ...editingQuestion, type: e.target.value as any })}
+                  />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Description */}
-                  <div className="space-y-1 col-span-2 md:col-span-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Short Help Description</label>
-                    <Input
-                      placeholder="e.g. Select if you want apex to configure custom URLs"
-                      value={editingQuestion.description || ""}
-                      onChange={(e) => setEditingQuestion({ ...editingQuestion, description: e.target.value })}
-                    />
-                  </div>
-
-                  {/* Default Value */}
-                  <div className="space-y-1 col-span-2 md:col-span-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Default Value</label>
-                    <Input
-                      placeholder="e.g. standard, 1, true, or blank"
-                      value={editingQuestion.defaultValue !== undefined ? String(editingQuestion.defaultValue) : ""}
-                      onChange={(e) => {
-                        let val: string | number | boolean = e.target.value;
-                        if (editingQuestion.type === "toggle") val = e.target.value === "true";
-                        if (["counter", "number"].includes(editingQuestion.type as string)) val = parseFloat(e.target.value) || 0;
-                        setEditingQuestion({ ...editingQuestion, defaultValue: val });
-                      }}
-                    />
-                  </div>
+                {/* Default Value */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Default Value (Optional)</label>
+                  <Input
+                    placeholder="e.g. 1, true, or option-value"
+                    value={editingQuestion.defaultValue !== undefined ? String(editingQuestion.defaultValue) : ""}
+                    onChange={(e) => setEditingQuestion({ ...editingQuestion, defaultValue: e.target.value })}
+                  />
                 </div>
+              </div>
 
-                {/* Required Toggle */}
-                <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <div className="flex items-center space-x-6 py-2 bg-slate-50/50 border border-slate-100 rounded-xl px-4">
+                <label className="flex items-center space-x-2 text-xs font-bold text-dezprox-primary cursor-pointer select-none">
                   <input
                     type="checkbox"
-                    id="isRequired"
                     checked={editingQuestion.isRequired || false}
                     onChange={(e) => setEditingQuestion({ ...editingQuestion, isRequired: e.target.checked })}
-                    className="rounded text-dezprox-primary focus:ring-dezprox-primary w-4 h-4 border-gray-300"
+                    className="rounded text-dezprox-accent focus:ring-dezprox-accent/20 border-gray-300 w-4 h-4 cursor-pointer"
                   />
-                  <label htmlFor="isRequired" className="text-xs font-bold text-gray-600 cursor-pointer select-none">
-                    Required Field (Prevent next step if empty)
-                  </label>
+                  <span>Mandatory Field / Required</span>
+                </label>
+              </div>
+
+              {/* Conditional Display Logic */}
+              <div className="bg-amber-50/15 p-4 rounded-xl border border-amber-100/50 space-y-3">
+                <span className="text-[10px] font-black uppercase text-amber-600 block tracking-wider">Conditional Visibility Logic (Optional)</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Dependent Parent Question</label>
+                    <Select
+                      options={[
+                        { value: "", label: "No Parent - Always Show" },
+                        ...availableParentQuestions.map((q) => ({ value: q.id, label: q.text }))
+                      ]}
+                      value={editingQuestion.conditionalParentId || ""}
+                      onChange={(e) => setEditingQuestion({ ...editingQuestion, conditionalParentId: e.target.value || null })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Triggering Option Value</label>
+                    <Input
+                      placeholder="e.g. true or enterprise-tier"
+                      disabled={!editingQuestion.conditionalParentId}
+                      value={editingQuestion.conditionalParentValue || ""}
+                      onChange={(e) => setEditingQuestion({ ...editingQuestion, conditionalParentValue: e.target.value || null })}
+                    />
+                  </div>
                 </div>
+              </div>
 
-                {/* Price Modifier directly on Question (Toggles, Counter, Number, Text) */}
-                {["toggle", "counter", "number", "text"].includes(editingQuestion.type || "") && (
-                  <div className="bg-slate-50/50 p-4 rounded-xl border border-gray-100 space-y-3">
-                    <h4 className="text-xs font-black text-dezprox-primary uppercase tracking-wider">
-                      Price Impact Configuration
-                    </h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Price Modifier */}
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                          Modifier Coefficient / Price
-                        </label>
-                        <Input
-                          type="number"
-                          step="any"
-                          value={editingQuestion.priceModifier || 0}
-                          onChange={(e) => setEditingQuestion({ ...editingQuestion, priceModifier: parseFloat(e.target.value) || 0 })}
-                        />
-                      </div>
-
-                      {/* Modifier Type */}
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                          Modifier Format
-                        </label>
-                        <Select
-                          options={[
-                            { value: "flat", label: `Flat Fee (+${currency})` },
-                            { value: "multiplier", label: "Percentage Multiplier Offset (e.g. 1.05 for +5%)" },
-                          ]}
-                          value={editingQuestion.modifierType || "flat"}
-                          onChange={(e) => setEditingQuestion({ ...editingQuestion, modifierType: e.target.value as "flat" | "multiplier" })}
-                        />
-                      </div>
+              {/* Validation Rules if Text/Number/Counter */}
+              {["number", "counter", "text"].includes(editingQuestion.type || "") && (
+                <div className="bg-blue-50/10 p-4 rounded-xl border border-blue-100/40 space-y-3">
+                  <span className="text-[10px] font-black uppercase text-blue-600 block tracking-wider">Input Validations Rules</span>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Min Value / Length</label>
+                      <Input
+                        type="number"
+                        placeholder="None"
+                        value={editingQuestion.validationRules?.min !== null ? String(editingQuestion.validationRules?.min) : ""}
+                        onChange={(e) => setValidationVal("min", e.target.value === "" ? null : parseInt(e.target.value))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Max Value / Length</label>
+                      <Input
+                        type="number"
+                        placeholder="None"
+                        value={editingQuestion.validationRules?.max !== null ? String(editingQuestion.validationRules?.max) : ""}
+                        onChange={(e) => setValidationVal("max", e.target.value === "" ? null : parseInt(e.target.value))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Regex Pattern Match</label>
+                      <Input
+                        placeholder="e.g. ^[0-9]{10}$"
+                        value={editingQuestion.validationRules?.pattern || ""}
+                        onChange={(e) => setValidationVal("pattern", e.target.value || null)}
+                      />
                     </div>
                   </div>
-                )}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Validation Failure Message</label>
+                    <Input
+                      placeholder="e.g. Must be a valid 10 digit telephone number"
+                      value={editingQuestion.validationRules?.message || ""}
+                      onChange={(e) => setValidationVal("message", e.target.value || null)}
+                    />
+                  </div>
+                </div>
+              )}
 
-                {/* Conditional Visibility Engine */}
-                <div className="bg-slate-50/50 p-4 rounded-xl border border-gray-100 space-y-3">
-                  <h4 className="text-xs font-black text-dezprox-primary uppercase tracking-wider">
-                    Conditional Visibility rules
-                  </h4>
-                  <p className="text-[10px] text-gray-400">
-                    Render this input only if a parent questionnaire question equals a target choice value.
-                  </p>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Parent Question Select */}
+              {/* Price Modifier for Single Value input (like Toggle / Text / Number) */}
+              {!["radio", "checkbox", "select"].includes(editingQuestion.type || "") && (
+                <div className="bg-slate-50 p-4 rounded-xl border border-gray-150 space-y-3">
+                  <span className="text-[10px] font-black uppercase text-gray-550 block tracking-wider">Static Pricing Modifier</span>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-1 col-span-2">
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Modifier Coefficient Value</label>
+                      <Input
+                        type="number"
+                        step="any"
+                        value={editingQuestion.priceModifier || 0}
+                        onChange={(e) => setEditingQuestion({ ...editingQuestion, priceModifier: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                        Parent Question
-                      </label>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Modifier Type</label>
                       <Select
                         options={[
-                          { value: "", label: "No Condition - Always Displayed" },
-                          ...availableParentQuestions.map((q) => ({ value: q.id, label: q.text }))
+                          { value: "flat", label: "Flat Surcharge (+/-)" },
+                          { value: "multiplier", label: "Multiplier Scale (x)" },
                         ]}
-                        value={editingQuestion.conditionalParentId || ""}
-                        onChange={(e) => setEditingQuestion({ ...editingQuestion, conditionalParentId: e.target.value })}
-                      />
-                    </div>
-
-                    {/* Target Parent Value */}
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                        If Parent Value Equals
-                      </label>
-                      <Input
-                        placeholder="e.g. Yes, basic, or custom-web-app"
-                        disabled={!editingQuestion.conditionalParentId}
-                        value={editingQuestion.conditionalParentValue || ""}
-                        onChange={(e) => setEditingQuestion({ ...editingQuestion, conditionalParentValue: e.target.value })}
+                        value={editingQuestion.modifierType || "flat"}
+                        onChange={(e) => setEditingQuestion({ ...editingQuestion, modifierType: e.target.value as any })}
                       />
                     </div>
                   </div>
                 </div>
+              )}
 
-                {/* Validation Rules Card (Text, Numbers, Counters) */}
-                {["text", "number", "counter"].includes(editingQuestion.type || "") && (
-                  <div className="bg-slate-50/50 p-4 rounded-xl border border-gray-100 space-y-3">
-                    <h4 className="text-xs font-black text-dezprox-primary uppercase tracking-wider">
-                      Validation & Boundaries Configuration
-                    </h4>
-                    
+              {/* Options Builder if Radio, Checkbox, Select */}
+              {["radio", "checkbox", "select"].includes(editingQuestion.type || "") && (
+                <div className="space-y-3 border-t border-gray-100 pt-4">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Define Selectable Options</label>
+                  
+                  {/* Option Add Form */}
+                  <div className="bg-slate-50/50 p-4 border border-gray-150 rounded-xl space-y-3">
                     <div className="grid grid-cols-2 gap-4">
-                      {/* Min / Max */}
-                      <div className="space-y-1 col-span-2 md:col-span-1">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                          Minimum Limit (or Char Length)
-                        </label>
-                        <Input
-                          type="number"
-                          value={editingQuestion.validationRules?.min !== undefined ? editingQuestion.validationRules.min : ""}
-                          onChange={(e) => setEditingQuestion({
-                            ...editingQuestion,
-                            validationRules: {
-                              ...(editingQuestion.validationRules || {}),
-                              min: e.target.value !== "" ? parseInt(e.target.value) : undefined
-                            }
-                          })}
-                        />
-                      </div>
-                      <div className="space-y-1 col-span-2 md:col-span-1">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                          Maximum Limit (or Char Length)
-                        </label>
-                        <Input
-                          type="number"
-                          value={editingQuestion.validationRules?.max !== undefined ? editingQuestion.validationRules.max : ""}
-                          onChange={(e) => setEditingQuestion({
-                            ...editingQuestion,
-                            validationRules: {
-                              ...(editingQuestion.validationRules || {}),
-                              max: e.target.value !== "" ? parseInt(e.target.value) : undefined
-                            }
-                          })}
-                        />
-                      </div>
-
-                      {/* Pattern Regex */}
-                      <div className="space-y-1 col-span-2">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                          Regex Pattern Match
-                        </label>
-                        <Input
-                          placeholder="e.g. ^[A-Za-z0-9]+$"
-                          value={editingQuestion.validationRules?.pattern || ""}
-                          onChange={(e) => setEditingQuestion({
-                            ...editingQuestion,
-                            validationRules: {
-                              ...(editingQuestion.validationRules || {}),
-                              pattern: e.target.value
-                            }
-                          })}
-                        />
-                      </div>
-
-                      {/* Error Message */}
-                      <div className="space-y-1 col-span-2">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                          Custom Error message
-                        </label>
-                        <Input
-                          placeholder="e.g. Only alpha-numerical input structures allowed"
-                          value={editingQuestion.validationRules?.message || ""}
-                          onChange={(e) => setEditingQuestion({
-                            ...editingQuestion,
-                            validationRules: {
-                              ...(editingQuestion.validationRules || {}),
-                              message: e.target.value
-                            }
-                          })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Option Builder (Radio, Checkbox, Dropdowns) */}
-                {["radio", "checkbox", "select"].includes(editingQuestion.type || "") && (
-                  <div className="bg-slate-50/50 p-4 rounded-xl border border-gray-100 space-y-4">
-                    <h4 className="text-xs font-black text-dezprox-primary uppercase tracking-wider">
-                      Option Set Creator
-                    </h4>
-                    
-                    <div className="grid grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-gray-150">
-                      {/* Option Label */}
                       <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">Option Label</label>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Option Value (Key/Slug)</label>
                         <Input
-                          placeholder="e.g. Business Site"
-                          value={optionLabel}
-                          onChange={(e) => setOptionLabel(e.target.value)}
-                        />
-                      </div>
-
-                      {/* Option Value */}
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">Option Value (ID)</label>
-                        <Input
-                          placeholder="e.g. business"
+                          placeholder="e.g. ecommerce-integration"
                           value={optionValue}
                           onChange={(e) => setOptionValue(e.target.value)}
                         />
                       </div>
-
-                      {/* Option Price Modifier */}
                       <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">Price modifier</label>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Display Label</label>
+                        <Input
+                          placeholder="e.g. E-Commerce Shopping Cart"
+                          value={optionLabel}
+                          onChange={(e) => setOptionLabel(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-1 col-span-2">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Pricing Modifier ({currency}/x)</label>
                         <Input
                           type="number"
+                          step="any"
                           value={optionPrice}
                           onChange={(e) => setOptionPrice(parseFloat(e.target.value) || 0)}
                         />
                       </div>
-
-                      {/* Modifier format */}
                       <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">Format</label>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Modifier Type</label>
                         <Select
                           options={[
-                            { value: "flat", label: `Flat (+${currency})` },
-                            { value: "multiplier", label: "Multiplier Offset" },
+                            { value: "flat", label: "Flat (+/-)" },
+                            { value: "multiplier", label: "Multiplier (x)" },
                           ]}
                           value={optionType}
-                          onChange={(e) => setOptionType(e.target.value as "flat" | "multiplier")}
+                          onChange={(e) => setOptionType(e.target.value as any)}
                         />
-                      </div>
-
-                      {/* Option Desc */}
-                      <div className="space-y-1 col-span-2">
-                        <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">Short Option Description</label>
-                        <Input
-                          placeholder="What features are bundled with this option..."
-                          value={optionDesc}
-                          onChange={(e) => setOptionDesc(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="col-span-2 pt-2 flex justify-end">
-                        <Button
-                          type="button"
-                          onClick={handleAddOption}
-                          variant="outline"
-                          size="sm"
-                          className="cursor-pointer font-bold text-xs"
-                        >
-                          Add Option
-                        </Button>
                       </div>
                     </div>
 
-                    {/* Rendered options list */}
-                    <div className="space-y-1.5 pt-1">
-                      {editingQuestion.options && editingQuestion.options.map((opt) => (
-                        <div key={opt.value} className="flex justify-between items-center p-2.5 bg-white border border-gray-150 rounded-lg text-xs">
-                          <div>
-                            <span className="font-bold text-dezprox-primary">{opt.label}</span>
-                            <span className="text-[10px] text-gray-400 block">ID: {opt.value} | {opt.description || "No description"}</span>
-                          </div>
-                          
-                          <div className="flex items-center space-x-3">
-                            <span className="font-bold text-dezprox-primary">
-                              {opt.priceModifier !== 0 ? (
-                                opt.modifierType === "flat" ? `+${currency}${opt.priceModifier}` : `x${opt.priceModifier}`
-                              ) : "Free"}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveOption(opt.value)}
-                              className="text-red-500 p-1 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                      {(!editingQuestion.options || editingQuestion.options.length === 0) && (
-                        <span className="text-[11px] text-gray-400 italic">Configure choices. Required for radio/checkbox/dropdown types.</span>
-                      )}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Brief Description (Optional)</label>
+                      <Input
+                        placeholder="e.g. Adds fully functional Stripe Checkout flow"
+                        value={optionDesc}
+                        onChange={(e) => setOptionDesc(e.target.value)}
+                      />
                     </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddOption}
+                      className="cursor-pointer font-bold"
+                    >
+                      ✓ Add Option to List
+                    </Button>
                   </div>
-                )}
 
-                {/* Footer Controls */}
-                <div className="flex justify-end gap-3 pt-5 border-t border-gray-100 mt-6">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsEditorOpen(false)}
-                    className="cursor-pointer font-bold text-xs"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="accent"
-                    size="sm"
-                    className="flex items-center gap-2 cursor-pointer font-bold text-xs"
-                  >
-                    <Save className="w-4 h-4" />
-                    Save Question
-                  </Button>
+                  {/* Options List */}
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {(editingQuestion.options || []).map((opt, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 border rounded-lg text-xs">
+                        <div className="min-w-0">
+                          <span className="font-bold text-dezprox-primary">{opt.label}</span>
+                          <span className="text-[10px] text-gray-400 ml-2">({opt.value})</span>
+                          {opt.description && (
+                            <p className="text-[10px] text-gray-400 mt-0.5">{opt.description}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-3 shrink-0">
+                          {opt.priceModifier !== 0 && (
+                            <Badge variant="outline" className="font-black text-[9px] border-amber-200 text-amber-600 bg-amber-50">
+                              {opt.priceModifier > 0 ? "+" : ""}{opt.modifierType === "multiplier" ? `x${opt.priceModifier}` : `${currency}${opt.priceModifier}`}
+                            </Badge>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveOption(idx)}
+                            className="text-red-500 hover:text-red-650 cursor-pointer p-0.5 hover:bg-gray-150 rounded"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </form>
-            </motion.div>
+              )}
+
+              {/* Status */}
+              <div className="space-y-1 border-t border-gray-100 pt-4">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Visibility Status</label>
+                <Select
+                  options={[
+                    { value: "active", label: "Active & Published" },
+                    { value: "inactive", label: "Inactive (Archived)" },
+                  ]}
+                  value={editingQuestion?.status || "active"}
+                  onChange={(e) => editingQuestion && setEditingQuestion({ ...editingQuestion, status: e.target.value })}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditorOpen(false)}
+                  className="cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="accent"
+                  size="sm"
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  Save Changes
+                </Button>
+              </div>
+            </form>
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
     </div>
   );
+
+  function setValidationVal(field: string, val: any) {
+    if (!editingQuestion) return;
+    setEditingQuestion({
+      ...editingQuestion,
+      validationRules: {
+        ...(editingQuestion.validationRules || { min: null, max: null, pattern: null, message: null }),
+        [field]: val
+      }
+    });
+  }
 }

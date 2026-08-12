@@ -1,20 +1,60 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  getMultipliers, 
-  saveMultipliers, 
-  MultiplierSet,
-  Multiplier
-} from "@/lib/db";
+import { MultiplierSet, Multiplier } from "@/lib/types";
 import { Save, AlertCircle } from "lucide-react";
+import { endpoints } from "@/lib/api/endpoints";
 
 export default function MultiplierManagement() {
-  const [multipliers, setMultipliers] = useState<MultiplierSet | null>(() => (typeof window !== "undefined" ? getMultipliers() : null));
+  const [multipliers, setMultipliers] = useState<MultiplierSet | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const fetchMultipliers = async () => {
+    try {
+      setLoading(true);
+      const res = await endpoints.adminGetMultipliers();
+      if (res.success && res.data) {
+        setAllMultipliers(res.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const setAllMultipliers = (data: any) => {
+    // Organize by categories
+    const complexity: Multiplier[] = [];
+    const urgency: Multiplier[] = [];
+    const quality: Multiplier[] = [];
+
+    const items = Array.isArray(data) ? data : [...(data.complexity || []), ...(data.urgency || []), ...(data.quality || [])];
+
+    items.forEach((item: any) => {
+      const formatted: Multiplier = {
+        id: item.id,
+        category: item.category,
+        label: item.label,
+        value: Number(item.value),
+        description: item.description || ""
+      };
+      if (item.category === "complexity") complexity.push(formatted);
+      if (item.category === "urgency") urgency.push(formatted);
+      if (item.category === "quality") quality.push(formatted);
+    });
+
+    setMultipliers({ complexity, urgency, quality });
+  };
+
+  useEffect(() => {
+    fetchMultipliers();
+  }, []);
 
   const handleMultiplierChange = (
     category: keyof MultiplierSet,
@@ -36,16 +76,41 @@ export default function MultiplierManagement() {
     });
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!multipliers) return;
 
-    saveMultipliers(multipliers);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    try {
+      setSaving(true);
+      // Collect all flat items to update
+      const allItems = [
+        ...multipliers.complexity,
+        ...multipliers.urgency,
+        ...multipliers.quality
+      ];
+
+      await Promise.all(allItems.map(item => 
+        endpoints.adminUpdateMultiplier(item.id, { value: item.value })
+      ));
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+      fetchMultipliers();
+    } catch (err) {
+      console.error("Failed to save multipliers:", err);
+      alert("Failed to save multipliers.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if (!multipliers) return null;
+  if (loading || !multipliers) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dezprox-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 font-sans">
@@ -109,10 +174,10 @@ export default function MultiplierManagement() {
           <Card className="border-gray-100 shadow-sm bg-white overflow-hidden">
             <CardHeader className="bg-slate-50/50 border-b border-gray-100 px-6 py-4">
               <CardTitle className="text-sm font-black text-dezprox-primary uppercase tracking-wider">
-                2. Delivery Urgency
+                2. Project Urgency
               </CardTitle>
               <CardDescription className="text-xs">
-                Coefficients based on timeline priorities
+                Surcharges based on project delivery timeline
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
@@ -145,10 +210,10 @@ export default function MultiplierManagement() {
           <Card className="border-gray-100 shadow-sm bg-white overflow-hidden">
             <CardHeader className="bg-slate-50/50 border-b border-gray-100 px-6 py-4">
               <CardTitle className="text-sm font-black text-dezprox-primary uppercase tracking-wider">
-                3. Quality Standard
+                3. Deliverable Quality
               </CardTitle>
               <CardDescription className="text-xs">
-                Coefficients based on polish levels
+                Standards of design, testing and code robustness
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
@@ -178,16 +243,16 @@ export default function MultiplierManagement() {
           </Card>
         </div>
 
-        {/* Form controls */}
-        <div className="flex justify-end pt-4 border-t border-gray-100">
+        <div className="flex justify-end pt-4">
           <Button
             type="submit"
             variant="accent"
             size="sm"
-            className="flex items-center gap-2 cursor-pointer shadow-sm"
+            disabled={saving}
+            className="flex items-center gap-2 cursor-pointer shadow-md"
           >
             <Save className="w-4 h-4" />
-            Update Coefficients
+            {saving ? "Saving Changes..." : "Save Multiplier Coefficients"}
           </Button>
         </div>
       </form>

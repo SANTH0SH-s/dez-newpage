@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import * as Icons from "lucide-react";
 import { ArrowLeft, ArrowRight, Cog } from "lucide-react";
 import { twMerge } from "tailwind-merge";
-import { getServices, getGlobalSettings, Question, PricingComponent, Package } from "@/lib/db";
+import { Service, Question, PricingComponent, Package } from "@/lib/types";
 
 interface DynamicFormProps {
   selectedServiceIds: string[];
@@ -33,11 +33,25 @@ export const DynamicForm = ({
   }, []);
 
   const services = useMemo(() => {
-    return mounted ? getServices() : [];
+    if (!mounted) return [];
+    const raw = localStorage.getItem("dezprox_services");
+    if (!raw) return [];
+    try {
+      return JSON.parse(raw) as Service[];
+    } catch {
+      return [];
+    }
   }, [mounted]);
 
   const currency = useMemo(() => {
-    return mounted ? getGlobalSettings().currency : "₹";
+    if (!mounted) return "₹";
+    const raw = localStorage.getItem("dezprox_settings");
+    if (!raw) return "₹";
+    try {
+      return JSON.parse(raw).currency || "₹";
+    } catch {
+      return "₹";
+    }
   }, [mounted]);
 
   // Auto-select first active package for all selected services if none is selected yet
@@ -149,10 +163,10 @@ export const DynamicForm = ({
           const msg = message || "Invalid input value.";
           
           if (q.type === "text" && typeof val === "string") {
-            if (min !== undefined && val.length < min) {
+            if (min !== undefined && min !== null && val.length < min) {
               newErrors[errorKey] = `Must be at least ${min} characters long.`;
             }
-            if (max !== undefined && val.length > max) {
+            if (max !== undefined && max !== null && val.length > max) {
               newErrors[errorKey] = `Must not exceed ${max} characters.`;
             }
             if (pattern) {
@@ -170,10 +184,10 @@ export const DynamicForm = ({
           if (["counter", "number"].includes(q.type)) {
             const numVal = parseFloat(String(val));
             if (!isNaN(numVal)) {
-              if (min !== undefined && numVal < min) {
+              if (min !== undefined && min !== null && numVal < min) {
                 newErrors[errorKey] = `Minimum value is ${min}.`;
               }
-              if (max !== undefined && numVal > max) {
+              if (max !== undefined && max !== null && numVal > max) {
                 newErrors[errorKey] = `Maximum value is ${max}.`;
               }
             }
@@ -696,8 +710,8 @@ export const DynamicForm = ({
                           <div className="pt-1">
                             <Input
                               type="number"
-                              min={question.validationRules?.min}
-                              max={question.validationRules?.max}
+                               min={question.validationRules?.min ?? undefined}
+                              max={question.validationRules?.max ?? undefined}
                               placeholder="Enter value..."
                               value={(selectedValue !== undefined && selectedValue !== null) ? String(selectedValue) : ""}
                               onChange={(e) => {

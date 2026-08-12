@@ -1,18 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { 
-  getEstimates, 
-  getServices, 
-  getGlobalSettings,
-  Estimate, 
-  Service 
-} from "@/lib/db";
+import { Estimate, Service } from "@/lib/types";
+import { endpoints } from "@/lib/api/endpoints";
 import { 
   FileDown, 
   TrendingUp, 
@@ -25,9 +20,37 @@ import {
 import { motion } from "framer-motion";
 
 export default function ReportsPage() {
-  const [estimates] = useState<Estimate[]>(() => (typeof window !== "undefined" ? getEstimates() : []));
-  const [services] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices() : []));
-  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
+  const [estimates, setEstimates] = useState<Estimate[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [currency, setCurrency] = useState("₹");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [estRes, srvRes, settingsRes] = await Promise.all([
+          endpoints.adminGetEstimates(1, 1000),
+          endpoints.adminGetServices(),
+          endpoints.adminGetSettings()
+        ]);
+        if (estRes.success && estRes.data) {
+          setEstimates(estRes.data.items);
+        }
+        if (srvRes.success && srvRes.data) {
+          setServices(srvRes.data);
+        }
+        if (settingsRes.success && settingsRes.data) {
+          setCurrency(settingsRes.data.currency);
+        }
+      } catch (err) {
+        console.error("Failed to load reports data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   // Filters State
   const [startDate, setStartDate] = useState("");
@@ -142,6 +165,14 @@ export default function ReportsPage() {
     setServiceFilter("all");
     setCustomerQuery("");
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dezprox-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 font-sans print:p-0">

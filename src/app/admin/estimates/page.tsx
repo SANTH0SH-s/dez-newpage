@@ -5,9 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Estimate } from "@/lib/db";
+import { Estimate } from "@/lib/types";
 import { endpoints } from "@/lib/api/endpoints";
-import { CostDetailItem, ServiceCostBreakdown } from "@/lib/pricingCalculator";
 import { Search, Trash2, Eye, X, Check, XCircle, RefreshCw } from "lucide-react";
 
 export default function EstimateManagement() {
@@ -389,7 +388,7 @@ export default function EstimateManagement() {
                 <div className="space-y-3">
                   <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Cost Breakdown Items</span>
                   <div className="border border-gray-100 rounded-xl divide-y divide-gray-100 overflow-hidden">
-                    {(viewingEstimate.breakdown.services as ServiceCostBreakdown[]).map((srv: ServiceCostBreakdown, idx: number) => (
+                    {(viewingEstimate.breakdown.services as any[]).map((srv: any, idx: number) => (
                       <div key={idx} className="p-4 space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-dezprox-primary text-sm">{srv.serviceName}</span>
@@ -398,7 +397,7 @@ export default function EstimateManagement() {
                           </span>
                         </div>
                         <ul className="text-xs text-gray-400 space-y-1 pl-4 list-disc">
-                          {srv.details?.filter((d: CostDetailItem) => d.type !== "base").map((d: CostDetailItem, dIdx: number) => (
+                          {srv.details?.filter((d: any) => d.type !== "base").map((d: any, dIdx: number) => (
                             <li key={dIdx} className="flex justify-between">
                               <span>{d.name}</span>
                               <span className="font-mono text-gray-500 text-[10px]">{d.costLabel}</span>

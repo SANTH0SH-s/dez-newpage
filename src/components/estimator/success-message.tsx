@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { calculateProjectCosts, CostDetailItem, TotalCalculationResult } from "@/lib/pricingCalculator";
+import { TotalCalculationResult, GlobalSettings } from "@/lib/types";
 import { ContactData } from "./contact-form";
 import { 
   ArrowRight,
@@ -21,7 +21,6 @@ import {
   Clock,
   Coins
 } from "lucide-react";
-import { getGlobalSettings, GlobalSettings, addEstimate } from "@/lib/db";
 import { motion, AnimatePresence } from "framer-motion";
 import * as Icons from "lucide-react";
 import { endpoints, prepareEstimatePayload } from "@/lib/api/endpoints";
@@ -35,7 +34,7 @@ interface SuccessMessageProps {
   projectModifiers?: { complexity?: string; urgency?: string; quality?: string };
   onContactSave?: (data: ContactData) => void;
   onModalStateChange?: (isOpen: boolean) => void;
-  calculationResult?: any;
+  calculationResult: TotalCalculationResult;
 }
 
 export const SuccessMessage = ({
@@ -49,8 +48,18 @@ export const SuccessMessage = ({
   onModalStateChange,
   calculationResult
 }: SuccessMessageProps) => {
-  const [settings] = useState<GlobalSettings | null>(() => (typeof window !== "undefined" ? getGlobalSettings() : null));
-  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
+  const [settings] = useState<GlobalSettings | null>(() => {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem("dezprox_settings");
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  });
+  const [currency] = useState(() => {
+    if (typeof window === "undefined") return "₹";
+    const raw = localStorage.getItem("dezprox_settings");
+    if (!raw) return "₹";
+    try { return JSON.parse(raw).currency || "₹"; } catch { return "₹"; }
+  });
   
   // Lead Generation Modals / Forms States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -70,7 +79,7 @@ export const SuccessMessage = ({
   // Instant Confirmation feedback states
   const [alertMessage, setAlertMessage] = useState<{ type: "success" | "info"; text: string } | null>(null);
 
-  const result: TotalCalculationResult = calculationResult || calculateProjectCosts(selectedServiceIds, answers, projectModifiers);
+  const result: TotalCalculationResult = calculationResult;
 
   // Proposal Numbers and Dates
   const today = React.useMemo(() => {
@@ -117,12 +126,11 @@ export const SuccessMessage = ({
 
   // Build the prefilled WhatsApp Text
   const getWhatsAppLink = (expertMode = false) => {
-    const settings = getGlobalSettings();
-    const wsNum = settings.whatsappNumber || "+15550199000";
+    const wsNum = settings?.whatsappNumber || "+15550199000";
     const cleanedNum = wsNum.replace(/[^0-9+]/g, "");
     
     const serviceDetails = result.services.map(s => {
-      const baseItem = s.details.find((d: CostDetailItem) => d.type === "base");
+      const baseItem = s.details.find((d: { type: string; name: string }) => d.type === "base");
       const displayName = baseItem ? baseItem.name : s.serviceName;
       return `- ${displayName} (${currency}${Math.round(s.totalCost).toLocaleString()})`;
     }).join("\n");
@@ -181,20 +189,7 @@ export const SuccessMessage = ({
 
     if (onContactSave) onContactSave(data);
 
-    const rangeText = `${currency}${Math.round(result.estimatedMin).toLocaleString()} - ${currency}${Math.round(result.estimatedMax).toLocaleString()}`;
-    addEstimate({
-      customerName: data.name,
-      customerEmail: data.email,
-      customerPhone: data.phone,
-      customerCompany: data.company,
-      notes: data.notes,
-      serviceNames: result.services.map(s => s.serviceName),
-      totalPrice: grandTotal,
-      status: "pending",
-      breakdown: result,
-      answers: answers,
-      estimateRange: rangeText
-    });
+
 
     const payload = prepareEstimatePayload(selectedServiceIds, answers, projectModifiers, data);
     endpoints.createEstimate(payload)
