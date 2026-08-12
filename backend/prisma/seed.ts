@@ -439,7 +439,7 @@ async function main() {
 
   // 7. Seed Dynamic Questions & Options
   // Extra pages question for website packages
-  const packagesList = ["web-std-no-domain", "web-std-with-domain", "web-dyn"];
+  const packagesList = ["web-std-no-domain", "web-std-with-domain", "web-nocode", "web-dyn"];
   for (const pkgId of packagesList) {
     const priceMod = pkgId === "web-dyn" ? 3500.00 : 2500.00;
     const qId = `extra-pages-${pkgId}`;

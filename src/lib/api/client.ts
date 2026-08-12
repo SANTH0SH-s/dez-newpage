@@ -14,6 +14,21 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
+  // Retrieve token from localStorage if in browser environment
+  if (typeof window !== "undefined") {
+    try {
+      const sessionStr = localStorage.getItem("dezprox_session");
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        if (session.token) {
+          headers.set("Authorization", `Bearer ${session.token}`);
+        }
+      }
+    } catch (e) {
+      // ignore parse errors
+    }
+  }
+
   const response = await fetch(url, {
     ...options,
     headers,

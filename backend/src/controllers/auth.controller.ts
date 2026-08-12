@@ -21,7 +21,10 @@ export class AuthController {
 
       res.status(200).json({
         success: true,
-        data: serializeData(result.admin),
+        data: {
+          ...serializeData(result.admin),
+          token: result.token,
+        },
       });
     } catch (error) {
       next(error);

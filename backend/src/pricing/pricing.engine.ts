@@ -38,7 +38,7 @@ export class PricingEngine {
       }
 
       const serviceAnswers = serviceInput.answers || {};
-      const selectedPackageId = serviceAnswers["selected-package"];
+      const selectedPackageId = serviceInput.packageId;
 
       let basePrice = new Decimal(service.basePrice);
       let baseLabel = `${service.name} (Base Service)`;

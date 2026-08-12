@@ -35,6 +35,8 @@ interface SuccessMessageProps {
   onContactSave?: (data: ContactData) => void;
   onModalStateChange?: (isOpen: boolean) => void;
   calculationResult: TotalCalculationResult;
+  backendEstimateId: string | null;
+  setBackendEstimateId: (id: string | null) => void;
 }
 
 export const SuccessMessage = ({
@@ -46,7 +48,9 @@ export const SuccessMessage = ({
   projectModifiers = { complexity: "simple", urgency: "normal", quality: "standard" },
   onContactSave,
   onModalStateChange,
-  calculationResult
+  calculationResult,
+  backendEstimateId,
+  setBackendEstimateId
 }: SuccessMessageProps) => {
   const [settings] = useState<GlobalSettings | null>(() => {
     if (typeof window === "undefined") return null;
@@ -97,19 +101,26 @@ export const SuccessMessage = ({
     return `QTN-2026-${num}`;
   });
 
-  const [backendEstimateId, setBackendEstimateId] = useState<string | null>(null);
   const displayQuotationNumber = backendEstimateId || quotationNumber;
 
+  const hasCreatedEstimate = React.useRef(false);
+
   useEffect(() => {
-    if (contactData && !backendEstimateId) {
+    if (contactData && !backendEstimateId && !hasCreatedEstimate.current) {
+      hasCreatedEstimate.current = true;
       const payload = prepareEstimatePayload(selectedServiceIds, answers, projectModifiers, contactData);
       endpoints.createEstimate(payload)
         .then((res) => {
           if (res.success && res.data?.id) {
             setBackendEstimateId(res.data.id);
+          } else {
+            hasCreatedEstimate.current = false; // Reset on failure so it can retry
           }
         })
-        .catch((err) => console.error("Failed to auto-create estimate:", err));
+        .catch((err) => {
+          console.error("Failed to auto-create estimate:", err);
+          hasCreatedEstimate.current = false;
+        });
     }
   }, [contactData, selectedServiceIds, answers, projectModifiers, backendEstimateId]);
 
@@ -191,14 +202,8 @@ export const SuccessMessage = ({
 
 
 
-    const payload = prepareEstimatePayload(selectedServiceIds, answers, projectModifiers, data);
-    endpoints.createEstimate(payload)
-      .then((res) => {
-        if (res.success && res.data?.id) {
-          setBackendEstimateId(res.data.id);
-        }
-      })
-      .catch((err) => console.error("Failed to create estimate on backend:", err));
+    // The useEffect will automatically pick up the new contactData from the parent and create the estimate
+    // if backendEstimateId is null. We don't need to manually call createEstimate here.
 
     setIsModalOpen(false);
     

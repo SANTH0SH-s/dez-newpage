@@ -27,6 +27,7 @@ export default function Home() {
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, Record<string, unknown>>>({});
   const [contactData, setContactData] = useState<ContactData | null>(null);
+  const [backendEstimateId, setBackendEstimateId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Project-wide multipliers state
@@ -104,6 +105,7 @@ export default function Home() {
         [questionId]: value
       }
     }));
+    setBackendEstimateId(null);
   };
 
   const handleStart = () => setCurrentStep(1);
@@ -123,6 +125,7 @@ export default function Home() {
       urgency: "normal",
       quality: "standard"
     });
+    setBackendEstimateId(null);
     setCurrentStep(0);
   };
 
@@ -194,7 +197,10 @@ export default function Home() {
               >
                 <ServiceSelector
                   selectedServiceIds={selectedServiceIds}
-                  onChange={setSelectedServiceIds}
+                  onChange={(ids) => {
+                    setSelectedServiceIds(ids);
+                    setBackendEstimateId(null);
+                  }}
                   onNext={handleNextFromSelector}
                 />
               </motion.div>
@@ -289,6 +295,8 @@ export default function Home() {
                   onContactSave={(data) => setContactData(data)}
                   onModalStateChange={(isOpen) => setIsModalOpen(isOpen)}
                   calculationResult={calculationResult}
+                  backendEstimateId={backendEstimateId}
+                  setBackendEstimateId={setBackendEstimateId}
                 />
               </motion.div>
             )}

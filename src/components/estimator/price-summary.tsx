@@ -121,8 +121,8 @@ export const PriceSummary = ({
 
 
 
-    const payload = prepareEstimatePayload(selectedServiceIds, answers, projectModifiers, data);
-    endpoints.createEstimate(payload).catch((err) => console.error("Failed to create estimate on backend:", err));
+    // The estimate will be created once the user reaches the SuccessMessage (Step 4).
+    // We only update the contactData in the parent here.
   };
 
   // Render Itemized breakdown rows
