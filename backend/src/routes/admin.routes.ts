@@ -52,4 +52,14 @@ router.patch("/settings", AdminController.updateSettings as any);
 // Audit Logs
 router.get("/audit-logs", AdminController.getAuditLogs as any);
 
+// Admin Estimates & Enquiries Access
+import { EstimateController } from "../controllers/estimate.controller";
+import { EnquiryController } from "../controllers/enquiry.controller";
+
+router.get("/estimates", EstimateController.getEstimates as any);
+router.get("/estimates/:id", EstimateController.getEstimateById as any);
+
+router.get("/enquiries", EnquiryController.getEnquiries as any);
+router.get("/enquiries/:id", EnquiryController.getEnquiryById as any);
+
 export default router;

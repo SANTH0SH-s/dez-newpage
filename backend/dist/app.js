@@ -12,6 +12,7 @@ const public_routes_1 = __importDefault(require("./routes/public.routes"));
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const estimate_routes_1 = __importDefault(require("./routes/estimate.routes"));
+const enquiry_routes_1 = __importDefault(require("./routes/enquiry.routes"));
 const app = (0, express_1.default)();
 // Middlewares
 app.use((0, cors_1.default)({
@@ -40,6 +41,8 @@ v1Router.use("/auth", auth_routes_1.default);
 v1Router.use("/admin", admin_routes_1.default);
 // Mount Estimates Route
 v1Router.use("/estimates", estimate_routes_1.default);
+// Mount Enquiries Route
+v1Router.use("/enquiries", enquiry_routes_1.default);
 app.use("/api/v1", v1Router);
 // Centralized error handling
 app.use(error_middleware_1.errorHandler);

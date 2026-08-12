@@ -22,3 +22,28 @@ export const EstimateCalculateSchema = z.object({
 });
 
 export type EstimateCalculateInput = z.infer<typeof EstimateCalculateSchema>;
+
+export const EstimateCreateSchema = EstimateCalculateSchema.extend({
+  customer: z.object({
+    name: z.string({ required_error: "Name is required" }).min(1, "Name cannot be empty"),
+    email: z.string({ required_error: "Email is required" }).email("Invalid email format"),
+    phone: z.string().optional().nullable(),
+    company: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+  }).optional().nullable(),
+});
+
+export type EstimateCreateInput = z.infer<typeof EstimateCreateSchema>;
+
+export const EnquiryCreateSchema = z.object({
+  name: z.string({ required_error: "Name is required" }).min(1, "Name cannot be empty"),
+  email: z.string({ required_error: "Email is required" }).email("Invalid email format"),
+  phone: z.string({ required_error: "Phone is required" }).min(1, "Phone cannot be empty"),
+  company: z.string().optional().nullable(),
+  message: z.string({ required_error: "Message is required" }).min(1, "Message cannot be empty"),
+  selectedServices: z.array(z.string()).default([]),
+  estimateRange: z.string().optional().nullable(),
+  estimateId: z.string().optional().nullable(),
+});
+
+export type EnquiryCreateInput = z.infer<typeof EnquiryCreateSchema>;

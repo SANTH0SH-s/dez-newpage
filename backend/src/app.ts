@@ -7,6 +7,7 @@ import publicRouter from "./routes/public.routes";
 import authRouter from "./routes/auth.routes";
 import adminRouter from "./routes/admin.routes";
 import estimateRouter from "./routes/estimate.routes";
+import enquiryRouter from "./routes/enquiry.routes";
 
 const app = express();
 
@@ -42,6 +43,9 @@ v1Router.use("/admin", adminRouter);
 
 // Mount Estimates Route
 v1Router.use("/estimates", estimateRouter);
+
+// Mount Enquiries Route
+v1Router.use("/enquiries", enquiryRouter);
 
 app.use("/api/v1", v1Router);
 

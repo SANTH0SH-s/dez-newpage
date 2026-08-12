@@ -46,4 +46,11 @@ router.get("/settings", admin_controller_1.AdminController.getSettings);
 router.patch("/settings", admin_controller_1.AdminController.updateSettings);
 // Audit Logs
 router.get("/audit-logs", admin_controller_1.AdminController.getAuditLogs);
+// Admin Estimates & Enquiries Access
+const estimate_controller_1 = require("../controllers/estimate.controller");
+const enquiry_controller_1 = require("../controllers/enquiry.controller");
+router.get("/estimates", estimate_controller_1.EstimateController.getEstimates);
+router.get("/estimates/:id", estimate_controller_1.EstimateController.getEstimateById);
+router.get("/enquiries", enquiry_controller_1.EnquiryController.getEnquiries);
+router.get("/enquiries/:id", enquiry_controller_1.EnquiryController.getEnquiryById);
 exports.default = router;
