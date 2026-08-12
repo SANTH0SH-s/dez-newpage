@@ -53,4 +53,18 @@ export class EnquiryRepository {
     ]);
     return { total, items, page, limit };
   }
+
+  static async delete(id: string) {
+    return prisma.enquiry.delete({
+      where: { id }
+    });
+  }
+
+  static async updateStatus(id: string, status: string) {
+    const dbStatus = status.toUpperCase() as EnquiryStatus;
+    return prisma.enquiry.update({
+      where: { id },
+      data: { status: dbStatus }
+    });
+  }
 }

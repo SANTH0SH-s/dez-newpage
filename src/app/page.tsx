@@ -14,6 +14,7 @@ import { ShieldCheck, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { initDb } from "@/lib/db";
+import { endpoints, prepareEstimatePayload } from "@/lib/api/endpoints";
 
 const FLOW_STEPS = [
   "Choose Services",
@@ -36,9 +37,65 @@ export default function Home() {
     quality: "standard"
   });
 
+  const [synced, setSynced] = useState(false);
+
   useEffect(() => {
     initDb();
+
+    const syncWithBackend = async () => {
+      try {
+        const [servicesRes, settingsRes, multipliersRes] = await Promise.all([
+          endpoints.getPublicServices(),
+          endpoints.getPublicSettings(),
+          endpoints.getPublicMultipliers()
+        ]);
+
+        if (servicesRes.success) {
+          localStorage.setItem("dezprox_services", JSON.stringify(servicesRes.data));
+        }
+        if (settingsRes.success) {
+          localStorage.setItem("dezprox_settings", JSON.stringify(settingsRes.data));
+        }
+        if (multipliersRes.success) {
+          const mults = multipliersRes.data;
+          localStorage.setItem("dezprox_multipliers", JSON.stringify(mults));
+        }
+      } catch (err) {
+        console.error("Failed to sync backend config to local storage:", err);
+      } finally {
+        setSynced(true);
+      }
+    };
+
+    syncWithBackend();
   }, []);
+
+  const [calculationResult, setCalculationResult] = useState<any>(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  useEffect(() => {
+    if (selectedServiceIds.length === 0) {
+      setCalculationResult(null);
+      return;
+    }
+
+    setIsCalculating(true);
+    const timer = setTimeout(async () => {
+      try {
+        const payload = prepareEstimatePayload(selectedServiceIds, answers, projectModifiers);
+        const res = await endpoints.calculateEstimate(payload);
+        if (res.success) {
+          setCalculationResult(res.data);
+        }
+      } catch (err) {
+        console.error("Calculation failed:", err);
+      } finally {
+        setIsCalculating(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [selectedServiceIds, answers, projectModifiers]);
 
   const handleAnswerChange = (serviceId: string, questionId: string, value: unknown) => {
     setAnswers((prev) => ({
@@ -184,6 +241,7 @@ export default function Home() {
                       answers={answers}
                       sidebarMode={true}
                       projectModifiers={projectModifiers}
+                      calculationResult={calculationResult}
                     />
                   </motion.div>
                 </div>
@@ -208,6 +266,7 @@ export default function Home() {
                   projectModifiers={projectModifiers}
                   contactData={contactData}
                   onContactSave={(data) => setContactData(data)}
+                  calculationResult={calculationResult}
                 />
               </motion.div>
             )}
@@ -230,6 +289,7 @@ export default function Home() {
                   projectModifiers={projectModifiers}
                   onContactSave={(data) => setContactData(data)}
                   onModalStateChange={(isOpen) => setIsModalOpen(isOpen)}
+                  calculationResult={calculationResult}
                 />
               </motion.div>
             )}
@@ -244,6 +304,7 @@ export default function Home() {
               sidebarMode={true}
               projectModifiers={projectModifiers}
               isMobileSheet={true}
+              calculationResult={calculationResult}
             />
           </div>
         )}

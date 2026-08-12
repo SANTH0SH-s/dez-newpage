@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EnquiryController = void 0;
 const estimate_schemas_1 = require("../schemas/estimate.schemas");
 const enquiry_service_1 = require("../services/enquiry.service");
+const enquiry_repository_1 = require("../repositories/enquiry.repository");
 const error_middleware_1 = require("../middleware/error.middleware");
 const serialization_1 = require("../utils/serialization");
 class EnquiryController {
@@ -48,6 +49,33 @@ class EnquiryController {
                     page: result.page,
                     limit: result.limit,
                 },
+            });
+        }
+        catch (error) {
+            next(error);
+        }
+    }
+    static async deleteEnquiry(req, res, next) {
+        try {
+            const { id } = req.params;
+            await enquiry_repository_1.EnquiryRepository.delete(id);
+            return res.status(200).json({
+                success: true,
+                message: "Enquiry deleted successfully",
+            });
+        }
+        catch (error) {
+            next(error);
+        }
+    }
+    static async updateStatus(req, res, next) {
+        try {
+            const { id } = req.params;
+            const { status } = req.body;
+            const result = await enquiry_repository_1.EnquiryRepository.updateStatus(id, status);
+            return res.status(200).json({
+                success: true,
+                data: (0, serialization_1.serializeData)(result),
             });
         }
         catch (error) {

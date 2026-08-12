@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import { initDb, getCurrentSession, logoutAdmin, hasAccessToRoute, UserSession, updateAdminPassword } from "@/lib/db";
+import { endpoints } from "@/lib/api/endpoints";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -55,34 +56,50 @@ export default function AdminLayout({
 
   useEffect(() => {
     initDb();
+    setIsMounted(true);
 
-    const timer = setTimeout(() => {
-      setIsMounted(true);
-      const activeSession = getCurrentSession();
-      setSession(activeSession);
-      setLoading(!activeSession);
-
-      if (!activeSession) {
+    const checkAuth = async () => {
+      try {
+        const res = await endpoints.getMe();
+        if (res.success && res.data) {
+          const activeSession = {
+            id: res.data.id,
+            email: res.data.email,
+            name: res.data.name,
+            role: res.data.role
+          } as any;
+          setSession(activeSession);
+          setLoading(false);
+          if (pathname === "/admin/login") {
+            router.push("/admin");
+          } else {
+            const hasAccess = hasAccessToRoute(activeSession.role, pathname);
+            if (!hasAccess && pathname !== "/admin/unauthorized") {
+              router.push("/admin/unauthorized");
+            }
+          }
+        } else {
+          throw new Error("Unauthorized");
+        }
+      } catch (err) {
+        setSession(null);
+        setLoading(false);
         if (pathname !== "/admin/login" && pathname !== "/admin/unauthorized") {
           router.push("/admin/login");
         }
-      } else {
-        if (pathname === "/admin/login") {
-          router.push("/admin");
-        } else {
-          const hasAccess = hasAccessToRoute(activeSession.role, pathname);
-          if (!hasAccess && pathname !== "/admin/unauthorized") {
-            router.push("/admin/unauthorized");
-          }
-        }
       }
-    }, 0);
+    };
 
-    return () => clearTimeout(timer);
+    checkAuth();
   }, [pathname, router]);
 
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await endpoints.logout();
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
     logoutAdmin();
     router.push("/admin/login");
   };

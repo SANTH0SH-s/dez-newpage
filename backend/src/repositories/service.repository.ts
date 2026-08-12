@@ -6,19 +6,63 @@ export class ServiceRepository {
       where: {
         status: "ACTIVE",
       },
-      select: {
-        id: true,
-        name: true,
-        category: true,
-        description: true,
-        iconName: true,
-        iconImage: true,
-        cardImage: true,
-        heroBanner: true,
-        thumbnail: true,
-        basePrice: true,
-        unitType: true,
-        status: true,
+      include: {
+        packages: {
+          where: {
+            status: "ACTIVE",
+          },
+          orderBy: {
+            displayOrder: "asc",
+          },
+          include: {
+            features: true,
+            questions: {
+              orderBy: {
+                displayOrder: "asc",
+              },
+              include: {
+                options: {
+                  orderBy: {
+                    id: "asc",
+                  },
+                },
+                validationRule: true,
+              },
+            },
+          },
+        },
+        questions: {
+          where: {
+            packageId: null, // Service-level questions only
+          },
+          orderBy: {
+            displayOrder: "asc",
+          },
+          include: {
+            options: {
+              orderBy: {
+                id: "asc",
+              },
+            },
+            validationRule: true,
+          },
+        },
+        components: {
+          where: {
+            status: "ACTIVE",
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+        faqs: {
+          where: {
+            status: "ACTIVE",
+          },
+          orderBy: {
+            displayOrder: "asc",
+          },
+        },
       },
     });
   }

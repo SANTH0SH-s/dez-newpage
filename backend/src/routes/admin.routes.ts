@@ -58,8 +58,12 @@ import { EnquiryController } from "../controllers/enquiry.controller";
 
 router.get("/estimates", EstimateController.getEstimates as any);
 router.get("/estimates/:id", EstimateController.getEstimateById as any);
+router.delete("/estimates/:id", EstimateController.deleteEstimate as any);
+router.patch("/estimates/:id/status", EstimateController.updateStatus as any);
 
 router.get("/enquiries", EnquiryController.getEnquiries as any);
 router.get("/enquiries/:id", EnquiryController.getEnquiryById as any);
+router.delete("/enquiries/:id", EnquiryController.deleteEnquiry as any);
+router.patch("/enquiries/:id/status", EnquiryController.updateStatus as any);
 
 export default router;

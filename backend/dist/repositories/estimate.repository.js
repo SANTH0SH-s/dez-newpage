@@ -109,9 +109,10 @@ class EstimateRepository {
         });
     }
     static async updateStatus(id, status) {
+        const dbStatus = status.toUpperCase();
         return database_1.prisma.estimate.update({
             where: { id },
-            data: { status }
+            data: { status: dbStatus }
         });
     }
     static async delete(id) {

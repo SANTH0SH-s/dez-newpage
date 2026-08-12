@@ -5,38 +5,63 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { 
-  getEstimates, 
-  deleteEstimate, 
-  updateEstimateStatus, 
-  getGlobalSettings,
-  Estimate 
-} from "@/lib/db";
+import { Estimate } from "@/lib/db";
+import { endpoints } from "@/lib/api/endpoints";
 import { CostDetailItem, ServiceCostBreakdown } from "@/lib/pricingCalculator";
 import { Search, Trash2, Eye, X, Check, XCircle, RefreshCw } from "lucide-react";
 
 export default function EstimateManagement() {
-  const [estimates, setEstimates] = useState<Estimate[]>(() => (typeof window !== "undefined" ? getEstimates() : []));
+  const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
+  const [currency, setCurrency] = useState("₹");
+  const [loading, setLoading] = useState(true);
   
   // Details Modal state
   const [viewingEstimate, setViewingEstimate] = useState<Estimate | null>(null);
 
-  const handleDelete = (id: string) => {
-    if (confirm(`Are you sure you want to delete Estimate ${id}?`)) {
-      deleteEstimate(id);
-      setEstimates(getEstimates());
+  const fetchEstimates = async () => {
+    try {
+      setLoading(true);
+      const res = await endpoints.adminGetEstimates(1, 100);
+      if (res.success && res.data) {
+        setEstimates(res.data.items || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleUpdateStatus = (id: string, status: Estimate["status"]) => {
-    updateEstimateStatus(id, status);
-    setEstimates(getEstimates());
-    // Update active modal view if open
-    if (viewingEstimate && viewingEstimate.id === id) {
-      setViewingEstimate({ ...viewingEstimate, status });
+  React.useEffect(() => {
+    fetchEstimates();
+    endpoints.getPublicSettings().then((res) => {
+      if (res.success && res.data?.currency) {
+        setCurrency(res.data.currency);
+      }
+    }).catch(console.error);
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await endpoints.adminDeleteEstimate(id);
+      fetchEstimates();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Failed to delete estimate: ${err.message || err}`);
+    }
+  };
+
+  const handleUpdateStatus = async (id: string, status: Estimate["status"]) => {
+    try {
+      await endpoints.adminUpdateEstimateStatus(id, status);
+      fetchEstimates();
+      if (viewingEstimate && viewingEstimate.id === id) {
+        setViewingEstimate({ ...viewingEstimate, status });
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 

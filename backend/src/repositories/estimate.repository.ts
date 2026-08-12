@@ -154,10 +154,11 @@ export class EstimateRepository {
     });
   }
 
-  static async updateStatus(id: string, status: EstimateStatus) {
+  static async updateStatus(id: string, status: string) {
+    const dbStatus = status.toUpperCase() as EstimateStatus;
     return prisma.estimate.update({
       where: { id },
-      data: { status }
+      data: { status: dbStatus }
     });
   }
 

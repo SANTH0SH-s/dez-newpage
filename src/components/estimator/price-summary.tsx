@@ -10,6 +10,7 @@ import { ChevronUp, ChevronDown, X, ArrowLeft, ArrowRight } from "lucide-react";
 import { getGlobalSettings, GlobalSettings, addEstimate } from "@/lib/db";
 import { motion, AnimatePresence } from "framer-motion";
 import { twMerge } from "tailwind-merge";
+import { endpoints, prepareEstimatePayload } from "@/lib/api/endpoints";
 
 import { ContactData } from "./contact-form";
 
@@ -23,6 +24,7 @@ interface PriceSummaryProps {
   isMobileSheet?: boolean;
   contactData?: ContactData | null;
   onContactSave?: (data: ContactData) => void;
+  calculationResult?: TotalCalculationResult;
 }
 
 // Smoothly animated count-up numbers using requestAnimationFrame
@@ -66,7 +68,8 @@ export const PriceSummary = ({
   projectModifiers = { complexity: "simple", urgency: "normal", quality: "standard" },
   isMobileSheet = false,
   contactData = null,
-  onContactSave
+  onContactSave,
+  calculationResult
 }: PriceSummaryProps) => {
   const [settings] = useState<GlobalSettings | null>(() => (typeof window !== "undefined" ? getGlobalSettings() : null));
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -79,7 +82,7 @@ export const PriceSummary = ({
   const currentSettings = settings || { currency: "₹", taxRate: 18, discountRate: 5, gateEstimateWithLeadForm: false };
   const currency = currentSettings.currency;
 
-  const result: TotalCalculationResult = calculateProjectCosts(
+  const result: TotalCalculationResult = calculationResult || calculateProjectCosts(
     selectedServiceIds,
     answers,
     projectModifiers
@@ -131,6 +134,9 @@ export const PriceSummary = ({
       answers: answers,
       estimateRange: rangeText
     });
+
+    const payload = prepareEstimatePayload(selectedServiceIds, answers, projectModifiers, data);
+    endpoints.createEstimate(payload).catch((err) => console.error("Failed to create estimate on backend:", err));
   };
 
   // Render Itemized breakdown rows

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { EstimateCalculateSchema, EstimateCreateSchema } from "../schemas/estimate.schemas";
 import { PricingCalculatorService } from "../services/pricing-calculator.service";
 import { EstimateService } from "../services/estimate.service";
+import { EstimateRepository } from "../repositories/estimate.repository";
 import { ApiError } from "../middleware/error.middleware";
 import { serializeData } from "../utils/serialization";
 
@@ -68,6 +69,33 @@ export class EstimateController {
           page: result.page,
           limit: result.limit,
         },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteEstimate(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      await EstimateRepository.delete(id);
+      return res.status(200).json({
+        success: true,
+        message: "Estimate deleted successfully",
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const result = await EstimateRepository.updateStatus(id, status);
+      return res.status(200).json({
+        success: true,
+        data: serializeData(result),
       });
     } catch (error) {
       next(error);

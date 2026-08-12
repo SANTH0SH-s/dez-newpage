@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { EnquiryCreateSchema } from "../schemas/estimate.schemas";
 import { EnquiryService } from "../services/enquiry.service";
+import { EnquiryRepository } from "../repositories/enquiry.repository";
 import { ApiError } from "../middleware/error.middleware";
 import { serializeData } from "../utils/serialization";
 
@@ -49,6 +50,33 @@ export class EnquiryController {
           page: result.page,
           limit: result.limit,
         },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteEnquiry(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      await EnquiryRepository.delete(id);
+      return res.status(200).json({
+        success: true,
+        message: "Enquiry deleted successfully",
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const result = await EnquiryRepository.updateStatus(id, status);
+      return res.status(200).json({
+        success: true,
+        data: serializeData(result),
       });
     } catch (error) {
       next(error);

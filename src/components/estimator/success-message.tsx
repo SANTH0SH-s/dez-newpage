@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { calculateProjectCosts, CostDetailItem } from "@/lib/pricingCalculator";
+import { calculateProjectCosts, CostDetailItem, TotalCalculationResult } from "@/lib/pricingCalculator";
 import { ContactData } from "./contact-form";
 import { 
   ArrowRight,
@@ -24,6 +24,7 @@ import {
 import { getGlobalSettings, GlobalSettings, addEstimate } from "@/lib/db";
 import { motion, AnimatePresence } from "framer-motion";
 import * as Icons from "lucide-react";
+import { endpoints, prepareEstimatePayload } from "@/lib/api/endpoints";
 
 interface SuccessMessageProps {
   selectedServiceIds: string[];
@@ -34,6 +35,7 @@ interface SuccessMessageProps {
   projectModifiers?: { complexity?: string; urgency?: string; quality?: string };
   onContactSave?: (data: ContactData) => void;
   onModalStateChange?: (isOpen: boolean) => void;
+  calculationResult?: any;
 }
 
 export const SuccessMessage = ({
@@ -44,7 +46,8 @@ export const SuccessMessage = ({
   onBack,
   projectModifiers = { complexity: "simple", urgency: "normal", quality: "standard" },
   onContactSave,
-  onModalStateChange
+  onModalStateChange,
+  calculationResult
 }: SuccessMessageProps) => {
   const [settings] = useState<GlobalSettings | null>(() => (typeof window !== "undefined" ? getGlobalSettings() : null));
   const [currency] = useState(() => (typeof window !== "undefined" ? getGlobalSettings().currency : "₹"));
@@ -67,7 +70,7 @@ export const SuccessMessage = ({
   // Instant Confirmation feedback states
   const [alertMessage, setAlertMessage] = useState<{ type: "success" | "info"; text: string } | null>(null);
 
-  const result = calculateProjectCosts(selectedServiceIds, answers, projectModifiers);
+  const result: TotalCalculationResult = calculationResult || calculateProjectCosts(selectedServiceIds, answers, projectModifiers);
 
   // Proposal Numbers and Dates
   const today = React.useMemo(() => {
@@ -84,6 +87,22 @@ export const SuccessMessage = ({
     const num = Math.floor(100000 + Math.random() * 900000);
     return `QTN-2026-${num}`;
   });
+
+  const [backendEstimateId, setBackendEstimateId] = useState<string | null>(null);
+  const displayQuotationNumber = backendEstimateId || quotationNumber;
+
+  useEffect(() => {
+    if (contactData && !backendEstimateId) {
+      const payload = prepareEstimatePayload(selectedServiceIds, answers, projectModifiers, contactData);
+      endpoints.createEstimate(payload)
+        .then((res) => {
+          if (res.success && res.data?.id) {
+            setBackendEstimateId(res.data.id);
+          }
+        })
+        .catch((err) => console.error("Failed to auto-create estimate:", err));
+    }
+  }, [contactData, selectedServiceIds, answers, projectModifiers, backendEstimateId]);
 
   const currentSettings = settings || { currency: "₹", taxRate: 18, discountRate: 5 };
   const subtotal = result.oneTimeSubtotal;
@@ -109,9 +128,9 @@ export const SuccessMessage = ({
     }).join("\n");
 
     const message = expertMode 
-      ? `Hello! I would like to consult with an expert regarding proposal ID ${quotationNumber}. The calculated grand total is ${currency}${Math.round(grandTotal).toLocaleString()}.`
+      ? `Hello! I would like to consult with an expert regarding proposal ID ${displayQuotationNumber}. The calculated grand total is ${currency}${Math.round(grandTotal).toLocaleString()}.`
       : `Hello! I just configured my custom project estimate on your portal.\n\n` +
-        `*Proposal ID:* ${quotationNumber}\n` +
+        `*Proposal ID:* ${displayQuotationNumber}\n` +
         `*Configured Services:* \n${serviceDetails}\n\n` +
         `*Subtotal:* ${currency}${Math.round(subtotal).toLocaleString()}\n` +
         `*GST (${Math.round(currentSettings.taxRate)}%):* ${currency}${Math.round(taxAmount).toLocaleString()}\n` +
@@ -137,7 +156,7 @@ export const SuccessMessage = ({
     } else if (action === "consultation") {
       triggerAlert("success", `Thank you ${data.name}! We have scheduled a free 30-minute scope consultation. A calendar invite is sent to ${data.email}.`);
     } else if (action === "email") {
-      triggerAlert("success", `Proposal ${quotationNumber} has been sent successfully to ${data.email}.`);
+      triggerAlert("success", `Proposal ${displayQuotationNumber} has been sent successfully to ${data.email}.`);
     } else if (action === "callback") {
       triggerAlert("success", `Callback request received. One of our experts will call you at ${data.phone} within 2 hours.`);
     }
@@ -177,6 +196,15 @@ export const SuccessMessage = ({
       estimateRange: rangeText
     });
 
+    const payload = prepareEstimatePayload(selectedServiceIds, answers, projectModifiers, data);
+    endpoints.createEstimate(payload)
+      .then((res) => {
+        if (res.success && res.data?.id) {
+          setBackendEstimateId(res.data.id);
+        }
+      })
+      .catch((err) => console.error("Failed to create estimate on backend:", err));
+
     setIsModalOpen(false);
     
     if (modalAction) {
@@ -196,7 +224,7 @@ export const SuccessMessage = ({
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-dezprox-primary border border-dezprox-accent/20 text-white rounded-full px-6 py-3 shadow-2xl flex items-center space-x-2 text-xs font-bold font-sans tracking-wide"
+            className="fixed top-36 left-1/2 -translate-x-1/2 z-[99999] bg-dezprox-primary border border-dezprox-accent/20 text-white rounded-full px-6 py-3 shadow-2xl flex items-center space-x-2 text-xs font-bold font-sans tracking-wide"
           >
             <CheckCircle className="w-4 h-4 text-dezprox-accent" />
             <span>{alertMessage.text}</span>
@@ -226,7 +254,7 @@ export const SuccessMessage = ({
             </span>
           </div>
           <Badge variant="secondary" className="self-start text-[10px] font-bold bg-dezprox-accent/10 border-dezprox-accent/20 text-dezprox-primary">
-            Proposal ID: {quotationNumber}
+            Proposal ID: {displayQuotationNumber}
           </Badge>
         </Card>
 
@@ -373,7 +401,7 @@ export const SuccessMessage = ({
           <div className="md:text-right">
             <h1 className="text-3xl font-black text-dezprox-primary tracking-tight">QUOTATION</h1>
             <div className="mt-3 text-xs space-y-1 text-dezprox-text/60 font-semibold">
-              <p><span className="text-gray-400 font-bold uppercase tracking-widest mr-1 text-[9px]">Proposal No:</span> <span className="font-mono text-dezprox-primary font-bold">{quotationNumber}</span></p>
+              <p><span className="text-gray-400 font-bold uppercase tracking-widest mr-1 text-[9px]">Proposal No:</span> <span className="font-mono text-dezprox-primary font-bold">{displayQuotationNumber}</span></p>
               <p><span className="text-gray-400 font-bold uppercase tracking-widest mr-1 text-[9px]">Date:</span> {today}</p>
               <p><span className="text-gray-400 font-bold uppercase tracking-widest mr-1 text-[9px]">Validity:</span> {validityDate}</p>
             </div>
@@ -633,7 +661,7 @@ export const SuccessMessage = ({
       {/* LEAD CAPTURE MODAL DIALOG */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto print:hidden">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto print:hidden">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}

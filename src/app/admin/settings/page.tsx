@@ -5,11 +5,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { 
-  getGlobalSettings, 
-  saveGlobalSettings, 
-  GlobalSettings 
-} from "@/lib/db";
+import { GlobalSettings } from "@/lib/db";
+import { endpoints } from "@/lib/api/endpoints";
 import { Save, Check, RefreshCw } from "lucide-react";
 
 export default function GlobalSettingsView() {
@@ -17,13 +14,21 @@ export default function GlobalSettingsView() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  React.useEffect(() => {
-    const data = getGlobalSettings();
-    const timer = setTimeout(() => {
-      setSettings(data);
+  const fetchSettings = async () => {
+    try {
+      const res = await endpoints.adminGetSettings();
+      if (res.success && res.data) {
+        setSettings(res.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
       setMounted(true);
-    }, 0);
-    return () => clearTimeout(timer);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchSettings();
   }, []);
 
   if (!mounted || !settings) {
@@ -51,7 +56,7 @@ export default function GlobalSettingsView() {
     });
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!settings) return;
 
@@ -63,13 +68,18 @@ export default function GlobalSettingsView() {
       maximumCost: parseFloat(String(settings.maximumCost)) || 0,
     };
 
-    saveGlobalSettings(cleanedSettings);
-    setSettings(cleanedSettings);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    try {
+      await endpoints.adminUpdateSettings(cleanedSettings);
+      setSettings(cleanedSettings);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Failed to save settings: ${err.message || err}`);
+    }
   };
 
-  const handleResetDefaults = () => {
+  const handleResetDefaults = async () => {
     if (confirm("Reset settings back to original defaults?")) {
       const defaults: GlobalSettings = {
         companyName: "Dezprox Solutions",
@@ -81,8 +91,13 @@ export default function GlobalSettingsView() {
         maximumCost: 100000,
         gateEstimateWithLeadForm: false,
       };
-      setSettings(defaults);
-      saveGlobalSettings(defaults);
+      try {
+        await endpoints.adminUpdateSettings(defaults);
+        setSettings(defaults);
+      } catch (err: any) {
+        console.error(err);
+        alert(`Failed to reset settings: ${err.message || err}`);
+      }
     }
   };
 

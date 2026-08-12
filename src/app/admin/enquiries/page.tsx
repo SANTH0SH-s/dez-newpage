@@ -5,37 +5,62 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { 
-  getEnquiries, 
-  deleteEnquiry, 
-  updateEnquiryStatus, 
-  getServices,
-  Enquiry,
-  Service
-} from "@/lib/db";
+import { Enquiry, Service } from "@/lib/db";
+import { endpoints } from "@/lib/api/endpoints";
 import { Search, Trash2, Eye, X, Phone, Mail, Building, Check, Clock } from "lucide-react";
 
 export default function CustomerEnquiries() {
-  const [enquiries, setEnquiries] = useState<Enquiry[]>(() => (typeof window !== "undefined" ? getEnquiries() : []));
-  const [servicesList] = useState<Service[]>(() => (typeof window !== "undefined" ? getServices() : []));
+  const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
+  const [servicesList, setServicesList] = useState<Service[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
   
   // Details Modal state
   const [viewingEnquiry, setViewingEnquiry] = useState<Enquiry | null>(null);
 
-  const handleDelete = (id: string) => {
-    if (confirm(`Are you sure you want to delete Enquiry ${id}?`)) {
-      deleteEnquiry(id);
-      setEnquiries(getEnquiries());
+  const fetchEnquiries = async () => {
+    try {
+      setLoading(true);
+      const res = await endpoints.adminGetEnquiries(1, 100);
+      if (res.success && res.data) {
+        setEnquiries(res.data.items || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleUpdateStatus = (id: string, status: Enquiry["status"]) => {
-    updateEnquiryStatus(id, status);
-    setEnquiries(getEnquiries());
-    if (viewingEnquiry && viewingEnquiry.id === id) {
-      setViewingEnquiry({ ...viewingEnquiry, status });
+  React.useEffect(() => {
+    fetchEnquiries();
+    endpoints.getPublicServices().then((res) => {
+      if (res.success && res.data) {
+        setServicesList(res.data);
+      }
+    }).catch(console.error);
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await endpoints.adminDeleteEnquiry(id);
+      fetchEnquiries();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Failed to delete enquiry: ${err.message || err}`);
+    }
+  };
+
+  const handleUpdateStatus = async (id: string, status: Enquiry["status"]) => {
+    try {
+      await endpoints.adminUpdateEnquiryStatus(id, status);
+      fetchEnquiries();
+      if (viewingEnquiry && viewingEnquiry.id === id) {
+        setViewingEnquiry({ ...viewingEnquiry, status });
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { DezproxLogo } from "@/components/ui/logo";
 import Link from "next/link";
 import { loginAdmin, getCurrentSession } from "@/lib/db";
+import { endpoints } from "@/lib/api/endpoints";
 import { Lock, Mail, ArrowRight, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -20,12 +21,16 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     // If already logged in, redirect to admin index
-    if (getCurrentSession()) {
-      router.push("/admin");
-    }
+    endpoints.getMe()
+      .then((res) => {
+        if (res.success && res.data) {
+          router.push("/admin");
+        }
+      })
+      .catch(() => {});
   }, [router]);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -34,11 +39,17 @@ export default function AdminLoginPage() {
       return;
     }
 
-    const session = loginAdmin(email, password);
-    if (session) {
-      router.push("/admin");
-    } else {
-      setError("Invalid administrative credentials. Access Denied.");
+    try {
+      const res = await endpoints.login({ email, password });
+      if (res.success && res.data) {
+        // Keep local storage session synced for legacy component compatibility
+        localStorage.setItem("dezprox_session", JSON.stringify(res.data));
+        router.push("/admin");
+      } else {
+        setError("Invalid administrative credentials. Access Denied.");
+      }
+    } catch (err: any) {
+      setError(err.message || "Invalid administrative credentials. Access Denied.");
     }
   };
 

@@ -4,6 +4,7 @@ exports.EstimateController = void 0;
 const estimate_schemas_1 = require("../schemas/estimate.schemas");
 const pricing_calculator_service_1 = require("../services/pricing-calculator.service");
 const estimate_service_1 = require("../services/estimate.service");
+const estimate_repository_1 = require("../repositories/estimate.repository");
 const error_middleware_1 = require("../middleware/error.middleware");
 const serialization_1 = require("../utils/serialization");
 class EstimateController {
@@ -65,6 +66,33 @@ class EstimateController {
                     page: result.page,
                     limit: result.limit,
                 },
+            });
+        }
+        catch (error) {
+            next(error);
+        }
+    }
+    static async deleteEstimate(req, res, next) {
+        try {
+            const { id } = req.params;
+            await estimate_repository_1.EstimateRepository.delete(id);
+            return res.status(200).json({
+                success: true,
+                message: "Estimate deleted successfully",
+            });
+        }
+        catch (error) {
+            next(error);
+        }
+    }
+    static async updateStatus(req, res, next) {
+        try {
+            const { id } = req.params;
+            const { status } = req.body;
+            const result = await estimate_repository_1.EstimateRepository.updateStatus(id, status);
+            return res.status(200).json({
+                success: true,
+                data: (0, serialization_1.serializeData)(result),
             });
         }
         catch (error) {
