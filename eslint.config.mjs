@@ -4,10 +4,8 @@ import nextTs from "eslint-config-next/typescript";
 export default [
   {
     ignores: [
-      "**/backend/**",
-      "backend/**",
-      "**/dez-newpage/**",
       "dez-newpage/**",
+      "backend/dist/**",
       ".next/**",
       "out/**",
       "build/**",
