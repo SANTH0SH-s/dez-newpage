@@ -200,7 +200,7 @@ CREATE TABLE "Estimate" (
     "taxAmount" DECIMAL(12,2) NOT NULL,
     "discountRateSnapshot" DECIMAL(5,2) NOT NULL,
     "discountAmount" DECIMAL(12,2) NOT NULL,
-    "currency" TEXT NOT NULL DEFAULT 'Γé╣',
+    "currency" TEXT NOT NULL DEFAULT '₹',
     "validUntil" TIMESTAMP(3),
     "status" "EstimateStatus" NOT NULL DEFAULT 'PENDING',
     "createdDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -274,7 +274,7 @@ CREATE TABLE "Enquiry" (
 CREATE TABLE "GlobalSettings" (
     "id" TEXT NOT NULL DEFAULT 'default',
     "companyName" TEXT NOT NULL,
-    "currency" TEXT NOT NULL DEFAULT 'Γé╣',
+    "currency" TEXT NOT NULL DEFAULT '₹',
     "taxRate" DECIMAL(5,2) NOT NULL,
     "discountRate" DECIMAL(5,2) NOT NULL,
     "defaultPricingMode" TEXT NOT NULL,
@@ -354,3 +354,8 @@ ALTER TABLE "SelectedEstimateAddon" ADD CONSTRAINT "SelectedEstimateAddon_select
 -- AddForeignKey
 ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_adminAccountId_fkey" FOREIGN KEY ("adminAccountId") REFERENCES "AdminAccount"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
+-- Enable Row-Level Security (RLS) on sensitive tables
+ALTER TABLE "Estimate" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Enquiry" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "AdminAccount" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "GlobalSettings" ENABLE ROW LEVEL SECURITY;
