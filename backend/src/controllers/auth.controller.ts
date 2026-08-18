@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Response, NextFunction } from "express";
 import { AuthService } from "../services/auth.service";
-import { loginSchema } from "../utils/admin.schemas";
+import { loginSchema, changePasswordSchema } from "../utils/admin.schemas";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { serializeData } from "../utils/serialization";
 
@@ -58,6 +58,25 @@ export class AuthController {
       res.status(200).json({
         success: true,
         data: { message: "Logged out successfully" },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async changePassword(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.admin) {
+        res.status(401).json({ success: false, error: { code: "UNAUTHORIZED", message: "Unauthorized" } });
+        return;
+      }
+      
+      const validated = changePasswordSchema.parse(req.body);
+      await AuthService.changePassword(req.admin.id, validated);
+      
+      res.status(200).json({
+        success: true,
+        data: { message: "Password updated successfully" },
       });
     } catch (error) {
       next(error);

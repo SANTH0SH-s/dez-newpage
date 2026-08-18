@@ -12,4 +12,11 @@ export class AdminRepository {
       where: { id },
     });
   }
+
+  static async updatePassword(id: string, passwordHash: string) {
+    return prisma.adminAccount.update({
+      where: { id },
+      data: { passwordHash },
+    });
+  }
 }

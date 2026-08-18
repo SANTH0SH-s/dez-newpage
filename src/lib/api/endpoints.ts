@@ -41,6 +41,7 @@ export const endpoints = {
   login: (body: unknown) => api.post<ApiResponse<{ token?: string }>>("/auth/login", body),
   getMe: () => api.get<ApiResponse<{ id: string; email: string; name: string }>>("/auth/me"),
   logout: () => api.post<ApiResponse<{ success: boolean }>>("/auth/logout", {}),
+  changePassword: (body: unknown) => api.post<ApiResponse<{ message: string }>>("/auth/change-password", body),
 
   // Admin CMS CRUD
   adminGetServices: () => api.get<ApiResponse<Service[]>>("/admin/services"),

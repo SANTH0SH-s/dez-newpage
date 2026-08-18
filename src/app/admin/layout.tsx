@@ -58,8 +58,11 @@ export default function AdminLayout({
   const [loading, setLoading] = useState(true);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -387,7 +390,9 @@ export default function AdminLayout({
                   onClick={() => {
                     setPasswordModalOpen(false);
                     setPasswordChangeSuccess(false);
+                    setCurrentPassword("");
                     setNewPassword("");
+                    setPasswordError("");
                   }}
                   className="absolute inset-0 bg-black"
                 />
@@ -416,7 +421,9 @@ export default function AdminLayout({
                         onClick={() => {
                           setPasswordModalOpen(false);
                           setPasswordChangeSuccess(false);
+                          setCurrentPassword("");
                           setNewPassword("");
+                          setPasswordError("");
                         }}
                         className="w-full font-bold text-xs py-3 rounded-full"
                         variant="primary"
@@ -426,6 +433,24 @@ export default function AdminLayout({
                     </div>
                   ) : (
                     <div className="space-y-4">
+                      {passwordError && (
+                        <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-xs rounded-xl font-bold">
+                          {passwordError}
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
+                          Current Password
+                        </label>
+                        <Input
+                          type="password"
+                          placeholder="Enter current password..."
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          className="w-full text-xs"
+                          disabled={isChangingPassword}
+                        />
+                      </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
                           New Password
@@ -436,32 +461,60 @@ export default function AdminLayout({
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
                           className="w-full text-xs"
+                          disabled={isChangingPassword}
                         />
                       </div>
                       <div className="flex space-x-3 pt-2">
                         <Button
                           onClick={() => {
                             setPasswordModalOpen(false);
+                            setCurrentPassword("");
                             setNewPassword("");
+                            setPasswordError("");
                           }}
                           variant="outline"
                           className="w-1/2 font-bold text-xs py-3 rounded-full cursor-pointer"
+                          disabled={isChangingPassword}
                         >
                           Cancel
                         </Button>
                         <Button
-                          onClick={() => {
-                            if (newPassword.trim().length >= 6) {
-                              localStorage.setItem("dezprox_admin_password", newPassword.trim());
-                              setPasswordChangeSuccess(true);
-                            } else {
-                              alert("Password must be at least 6 characters.");
+                          onClick={async () => {
+                            setPasswordError("");
+                            if (!currentPassword) {
+                              setPasswordError("Current password is required.");
+                              return;
+                            }
+                            if (newPassword.trim().length < 6) {
+                              setPasswordError("New password must be at least 6 characters.");
+                              return;
+                            }
+                            
+                            setIsChangingPassword(true);
+                            try {
+                              const res = await endpoints.changePassword({
+                                currentPassword,
+                                newPassword: newPassword.trim(),
+                              });
+                              
+                              if (res.success) {
+                                setPasswordChangeSuccess(true);
+                                setCurrentPassword("");
+                                setNewPassword("");
+                              } else {
+                                setPasswordError(res.error?.message || "Failed to change password.");
+                              }
+                            } catch (error: any) {
+                              setPasswordError(error.message || "An unexpected error occurred.");
+                            } finally {
+                              setIsChangingPassword(false);
                             }
                           }}
                           variant="accent"
                           className="w-1/2 font-bold text-xs py-3 rounded-full cursor-pointer"
+                          disabled={isChangingPassword}
                         >
-                          Save Password
+                          {isChangingPassword ? "Saving..." : "Save Password"}
                         </Button>
                       </div>
                     </div>

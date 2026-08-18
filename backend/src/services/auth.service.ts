@@ -56,4 +56,22 @@ export class AuthService {
       role: admin.role,
     };
   }
+
+  static async changePassword(adminId: string, data: { currentPassword: string; newPassword: string }) {
+    const admin = await AdminRepository.findById(adminId);
+    if (!admin) {
+      throw new ApiError(404, "NOT_FOUND", "Admin account not found");
+    }
+
+    const isMatch = await bcrypt.compare(data.currentPassword, admin.passwordHash);
+    if (!isMatch) {
+      throw new ApiError(400, "BAD_REQUEST", "Incorrect current password");
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(data.newPassword, salt);
+    await AdminRepository.updatePassword(adminId, passwordHash);
+
+    return { success: true };
+  }
 }
