@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Estimate } from "@/lib/types";
 import { endpoints } from "@/lib/api/endpoints";
 import { Search, Trash2, Eye, X, Check, XCircle, RefreshCw } from "lucide-react";
+import { AdminSkeleton } from "@/components/ui/admin-skeleton";
 
 export default function EstimateManagement() {
   const [estimates, setEstimates] = useState<Estimate[]>([]);
@@ -75,6 +76,10 @@ export default function EstimateManagement() {
 
     return matchesSearch && matchesStatus;
   });
+
+  if (loading) {
+    return <AdminSkeleton />;
+  }
 
   return (
     <div className="space-y-8 font-sans">

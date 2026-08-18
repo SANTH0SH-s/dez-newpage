@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { MultiplierSet, Multiplier } from "@/lib/types";
 import { Save, AlertCircle } from "lucide-react";
 import { endpoints } from "@/lib/api/endpoints";
+import { AdminSkeleton } from "@/components/ui/admin-skeleton";
 
 export default function MultiplierManagement() {
   const [multipliers, setMultipliers] = useState<MultiplierSet | null>(null);
@@ -105,11 +106,7 @@ export default function MultiplierManagement() {
   };
 
   if (loading || !multipliers) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dezprox-primary" />
-      </div>
-    );
+    return <AdminSkeleton />;
   }
 
   return (

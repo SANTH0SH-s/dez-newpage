@@ -14,6 +14,7 @@ import { ShieldCheck, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { endpoints, prepareEstimatePayload } from "@/lib/api/endpoints";
+import { Button } from "@/components/ui/button";
 
 const FLOW_STEPS = [
   "Choose Services",
@@ -22,26 +23,63 @@ const FLOW_STEPS = [
   "Get Proposal"
 ];
 
+function useSessionStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    if (typeof window === "undefined") {
+      return initialValue;
+    }
+    try {
+      const item = window.sessionStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      return initialValue;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(key, JSON.stringify(storedValue));
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }, [key, storedValue]);
+
+  return [storedValue, setStoredValue];
+}
+
 export default function Home() {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
-  const [answers, setAnswers] = useState<Record<string, Record<string, unknown>>>({});
-  const [contactData, setContactData] = useState<ContactData | null>(null);
-  const [backendEstimateId, setBackendEstimateId] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentStep, setCurrentStep] = useSessionStorage("estimator_currentStep", 0);
+  const [selectedServiceIds, setSelectedServiceIds] = useSessionStorage<string[]>("estimator_selectedServiceIds", []);
+  const [answers, setAnswers] = useSessionStorage<Record<string, Record<string, unknown>>>("estimator_answers", {});
+  const [contactData, setContactData] = useSessionStorage<ContactData | null>("estimator_contactData", null);
+  const [backendEstimateId, setBackendEstimateId] = useSessionStorage<string | null>("estimator_backendEstimateId", null);
+  const [isModalOpen, setIsModalOpen] = useSessionStorage("estimator_isModalOpen", false);
   
   // Project-wide multipliers state
-  const [projectModifiers, setProjectModifiers] = useState({
+  const [projectModifiers, setProjectModifiers] = useSessionStorage("estimator_projectModifiers", {
     complexity: "simple",
     urgency: "normal",
     quality: "standard"
   });
 
   const [synced, setSynced] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(() => {
+    if (typeof window !== "undefined") {
+      const hasServices = localStorage.getItem("dezprox_services");
+      const hasSettings = localStorage.getItem("dezprox_settings");
+      // If we already have cached data, don't show the initial loading screen
+      if (hasServices && hasSettings) return false;
+    }
+    return true;
+  });
 
   useEffect(() => {
     const syncWithBackend = async () => {
       try {
+        setInitError(null);
         const [servicesRes, settingsRes, multipliersRes] = await Promise.all([
           endpoints.getPublicServices(),
           endpoints.getPublicSettings(),
@@ -58,18 +96,26 @@ export default function Home() {
           const mults = multipliersRes.data;
           localStorage.setItem("dezprox_multipliers", JSON.stringify(mults));
         }
+
+        if (!servicesRes.success || !settingsRes.success) {
+          setInitError("Unable to load estimator configuration. Please try refreshing the page.");
+        }
       } catch (err) {
-        console.error("Failed to sync backend config to local storage:", err);
+        setInitError("Unable to establish a secure connection with the server.");
+        // Next.js Turbopack intercepts console.error and crashes the dev overlay.
+        // We handle the error gracefully in the UI state instead.
       } finally {
         setSynced(true);
+        setIsInitialLoad(false);
       }
     };
 
     syncWithBackend();
   }, []);
 
-  const [calculationResult, setCalculationResult] = useState<any>(null);
+  const [calculationResult, setCalculationResult] = useSessionStorage<any>("estimator_calculationResult", null);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [calcError, setCalcError] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedServiceIds.length === 0) {
@@ -80,21 +126,24 @@ export default function Home() {
     }
 
     setIsCalculating(true);
-    const timer = setTimeout(async () => {
+    
+    // Perform calculation immediately without setTimeout
+    (async () => {
       try {
+        setCalcError(null);
         const payload = prepareEstimatePayload(selectedServiceIds, answers, projectModifiers);
         const res = await endpoints.calculateEstimate(payload);
         if (res.success) {
           setCalculationResult(res.data);
+        } else {
+          setCalcError(res.message || "Failed to calculate pricing. Please try again.");
         }
       } catch (err) {
-        console.error("Calculation failed:", err);
+        setCalcError("An error occurred during calculation. Please try again.");
       } finally {
         setIsCalculating(false);
       }
-    }, 300);
-
-    return () => clearTimeout(timer);
+    })();
   }, [selectedServiceIds, answers, projectModifiers]);
 
   const handleAnswerChange = (serviceId: string, questionId: string, value: unknown) => {
@@ -142,10 +191,10 @@ export default function Home() {
           <DezproxLogo showTagline={true} />
 
           <div className="flex items-center space-x-6 text-sm font-sans font-bold text-gray-500">
-            <span className="hidden md:inline-flex items-center gap-1.5 hover:text-dezprox-primary transition-colors cursor-pointer">
+            <Link href="/security/data-guarantee" className="hidden md:inline-flex items-center gap-1.5 hover:text-dezprox-primary transition-colors cursor-pointer">
               <ShieldCheck className="w-4 h-4 text-dezprox-accent" />
               Secure Data Guarantee
-            </span>
+            </Link>
             <Link 
               href="/admin" 
               className="inline-flex items-center gap-1.5 text-dezprox-primary hover:text-dezprox-accent transition-colors border border-gray-200 hover:border-dezprox-accent/20 bg-white/50 hover:bg-dezprox-accent/5 px-4 py-2 rounded-full text-xs transition-all shadow-sm"
@@ -159,8 +208,26 @@ export default function Home() {
 
       {/* Main Flow Orchestrator */}
       <main className="flex-1 w-full flex flex-col items-center relative z-10">
-        {/* Stepper container (Shown when not on Hero or Success Page) */}
-        {currentStep > 0 && currentStep < 4 && (
+        
+        {isInitialLoad && (
+          <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dezprox-primary mb-4" />
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Loading Estimator...</span>
+          </div>
+        )}
+
+        {initError && (
+          <div className="w-full max-w-2xl mx-auto mt-12 p-6 bg-red-50 border border-red-200 rounded-2xl text-center">
+            <h3 className="font-bold text-red-600 mb-2">Configuration Error</h3>
+            <p className="text-sm text-red-500 mb-4">{initError}</p>
+            <Button variant="outline" onClick={() => window.location.reload()}>Retry Loading</Button>
+          </div>
+        )}
+
+        {!isInitialLoad && !initError && (
+          <>
+            {/* Stepper container (Shown when not on Hero or Success Page) */}
+            {currentStep > 0 && currentStep < 4 && (
           <div className="w-full max-w-[1280px] mx-auto pt-10 pb-6 print:hidden">
             <ProgressStepper 
               steps={FLOW_STEPS} 
@@ -233,22 +300,14 @@ export default function Home() {
                   </motion.div>
                 </div>
 
-                {/* Live Sidebar Calculator Widget (Right Column) */}
                 <div className="lg:col-span-1 py-8 hidden lg:block sticky top-24 self-start">
-                  <motion.div
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <PriceSummary
-                      selectedServiceIds={selectedServiceIds}
-                      answers={answers}
-                      sidebarMode={true}
-                      projectModifiers={projectModifiers}
-                      calculationResult={calculationResult}
-                    />
-                  </motion.div>
+                  <PriceSummary
+                    selectedServiceIds={selectedServiceIds}
+                    answers={answers}
+                    sidebarMode={true}
+                    projectModifiers={projectModifiers}
+                    calculationResult={calculationResult}
+                  />
                 </div>
               </motion.div>
             )}
@@ -315,16 +374,18 @@ export default function Home() {
             />
           </div>
         )}
-      </main>
+      </>
+    )}
+  </main>
 
       {/* Footer Info */}
       <footer className="border-t border-gray-100 py-8 bg-gray-50/50 text-center text-xs text-gray-400 font-sans font-semibold mt-16 px-4 print:hidden">
         <div className="max-w-[1280px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <p>© {new Date().getFullYear()} Dezprox. All rights reserved. Dynamic Service Pricing & Estimation Portal.</p>
           <div className="flex space-x-6">
-            <span className="hover:text-dezprox-primary transition-colors cursor-pointer">Privacy Policy</span>
-            <span className="hover:text-dezprox-primary transition-colors cursor-pointer">Terms of Service</span>
-            <span className="hover:text-dezprox-primary transition-colors cursor-pointer">Platform Security</span>
+            <Link href="/privacy" className="hover:text-dezprox-primary transition-colors cursor-pointer">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-dezprox-primary transition-colors cursor-pointer">Terms of Service</Link>
+            <Link href="/security" className="hover:text-dezprox-primary transition-colors cursor-pointer">Platform Security</Link>
           </div>
         </div>
       </footer>

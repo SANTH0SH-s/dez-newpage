@@ -11,17 +11,19 @@ import {
 } from "lucide-react";
 import { Service, Estimate } from "@/lib/types";
 import { endpoints } from "@/lib/api/endpoints";
+import { AdminSkeleton } from "@/components/ui/admin-skeleton";
 
 export default function AdminDashboard() {
   const [services, setServices] = useState<Service[]>([]);
   const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [currency, setCurrency] = useState("₹");
   const [loading, setLoading] = useState(true);
+  const [adminError, setAdminError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setAdminError(null);
         const [estRes, srvRes, settingsRes] = await Promise.all([
           endpoints.adminGetEstimates(1, 1000),
           endpoints.adminGetServices(),
@@ -38,10 +40,13 @@ export default function AdminDashboard() {
         }
       } catch (err) {
         console.error("Failed to load dashboard data:", err);
+        setAdminError("Unable to load dashboard data. Please check your connection or try again.");
       } finally {
         setLoading(false);
       }
-    };
+  };
+
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -75,9 +80,22 @@ export default function AdminDashboard() {
     .slice(0, 6);
 
   if (loading) {
+    return <AdminSkeleton />;
+  }
+
+  if (adminError) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dezprox-primary" />
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
+        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
+          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h3 className="font-bold text-red-600 mb-2">Dashboard Error</h3>
+        <p className="text-sm text-red-500 mb-6">{adminError}</p>
+        <button onClick={loadData} className="px-6 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold hover:bg-gray-50 transition-colors">
+          Retry Loading
+        </button>
       </div>
     );
   }

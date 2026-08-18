@@ -104,25 +104,35 @@ export const SuccessMessage = ({
   const displayQuotationNumber = backendEstimateId || quotationNumber;
 
   const hasCreatedEstimate = React.useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (contactData && !backendEstimateId && !hasCreatedEstimate.current) {
+    if (contactData && !backendEstimateId && !hasCreatedEstimate.current && !isSubmitting) {
       hasCreatedEstimate.current = true;
+      setIsSubmitting(true);
+      setSubmitError(null);
       const payload = prepareEstimatePayload(selectedServiceIds, answers, projectModifiers, contactData);
       endpoints.createEstimate(payload)
         .then((res) => {
           if (res.success && res.data?.id) {
             setBackendEstimateId(res.data.id);
+            setSubmitError(null);
           } else {
             hasCreatedEstimate.current = false; // Reset on failure so it can retry
+            setSubmitError(res.message || "Failed to save proposal. Please try again.");
           }
         })
         .catch((err) => {
           console.error("Failed to auto-create estimate:", err);
           hasCreatedEstimate.current = false;
+          setSubmitError("An error occurred while saving the proposal. Please check your connection and try again.");
+        })
+        .finally(() => {
+          setIsSubmitting(false);
         });
     }
-  }, [contactData, selectedServiceIds, answers, projectModifiers, backendEstimateId]);
+  }, [contactData, selectedServiceIds, answers, projectModifiers, backendEstimateId, isSubmitting]);
 
   const currentSettings = settings || { currency: "₹", taxRate: 18, discountRate: 5 };
   const subtotal = result.oneTimeSubtotal;
@@ -389,12 +399,11 @@ export const SuccessMessage = ({
               <div className="w-8 h-8 rounded-lg bg-dezprox-primary flex items-center justify-center text-white font-black text-base shadow-sm">
                 D
               </div>
-              <span className="text-lg font-black text-dezprox-primary tracking-wider">DEZPROX</span>
+              <span className="text-lg font-black text-dezprox-primary tracking-wider">DEZPROX LLP</span>
             </div>
             <p className="text-xs text-dezprox-text/50 mt-2 font-medium">
-              Premium Service Development & Strategy Hub<br />
-              100 Cloud Parkway, Tech District, Suite 500<br />
-              contact@dezprox.com | +1 (555) 019-9000
+              Chennai, Tamil Nadu<br />
+              info@dezprox.com | {settings?.whatsappNumber || "+1 (555) 019-9000"}
             </p>
           </div>
 
@@ -440,7 +449,7 @@ export const SuccessMessage = ({
           <div>
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">Prepared By:</span>
             <div className="text-xs space-y-1 font-medium text-dezprox-primary">
-              <p className="font-extrabold text-sm text-dezprox-primary">Dezprox Estimator Suite</p>
+              <p className="font-extrabold text-sm text-dezprox-primary">DEZPROX LLP Estimator Suite</p>
               <p className="text-[11px] font-bold text-dezprox-accent uppercase block tracking-wide">Est. Delivery Timeline: {overallTimeline}</p>
               <p className="text-dezprox-text/60">CMS Account Executive</p>
               <p className="text-dezprox-text/60">Inquiry Routing Code: {result.services.map(s => s.serviceId).join("-")}</p>
@@ -626,14 +635,14 @@ export const SuccessMessage = ({
           )}
           <div className="flex flex-col md:items-end justify-end mt-4 md:mt-0">
             <div className="border-b border-gray-250 w-48 text-center pb-2 font-serif italic text-gray-400 select-none">
-              Dezprox Estimator
+              DEZPROX LLP Estimator
             </div>
             <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1 mr-12">Authorized Signatory</span>
           </div>
         </div>
 
         <div className="text-[9px] text-dezprox-text/30 text-center leading-relaxed font-semibold pt-8 border-t border-gray-50 mt-12 block">
-          Dezprox Quotation System. Generated on demand by client configuration parameters. This proposal remains non-binding until explicitly signed.
+          DEZPROX LLP Quotation System. Generated on demand by client configuration parameters. This proposal remains non-binding until explicitly signed.
         </div>
       </Card>
 

@@ -117,6 +117,15 @@ export default function AdminLayout({
     return <>{children}</>;
   }
 
+  if (!session && !loading) {
+    // Avoid rendering protected children while redirecting
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-50">
+        <div className="w-8 h-8 rounded-full border-2 border-dezprox-accent border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
   // Filter navigation links based on roles
   const filteredNavItems = NAV_ITEMS.filter((item) => {
     if (!session) return false;

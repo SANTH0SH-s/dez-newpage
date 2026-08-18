@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { AdminSkeleton } from "@/components/ui/admin-skeleton";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -134,11 +135,7 @@ export default function ServiceManagement() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dezprox-primary" />
-      </div>
-    );
+    return <AdminSkeleton />;
   }
 
   return (

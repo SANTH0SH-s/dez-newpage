@@ -35,7 +35,7 @@ const AnimatedNumber = ({ value, currency }: { value: number; currency: string }
     const end = value;
     if (start === end) return;
 
-    const duration = 350; // ms
+    const duration = 150; // ms
     const startTime = performance.now();
 
     const animate = (now: number) => {
@@ -55,7 +55,7 @@ const AnimatedNumber = ({ value, currency }: { value: number; currency: string }
     requestAnimationFrame(animate);
   }, [value, displayValue]);
 
-  return <span>{currency}{displayValue.toLocaleString()}</span>;
+  return <span className="tabular-nums">{currency}{displayValue.toLocaleString()}</span>;
 };
 
 export const PriceSummary = ({

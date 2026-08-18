@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Estimate, Service } from "@/lib/types";
 import { endpoints } from "@/lib/api/endpoints";
+import { AdminSkeleton } from "@/components/ui/admin-skeleton";
 import { 
   FileDown, 
   TrendingUp, 
@@ -167,11 +168,7 @@ export default function ReportsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dezprox-primary" />
-      </div>
-    );
+    return <AdminSkeleton />;
   }
 
   return (
