@@ -25,7 +25,7 @@ export const errorHandler = (
       success: false,
       error: {
         code: "BAD_REQUEST",
-        message: "Invalid request data",
+        message: err.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ') || "Invalid request data",
       },
     });
     return;

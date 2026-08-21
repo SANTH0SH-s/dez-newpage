@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AdminSkeleton } from "@/components/ui/admin-skeleton";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,9 @@ export default function ServiceManagement() {
   // Editor/Modal states
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingService, setEditingService] = useState<Partial<Service> | null>(null);
+
+  // Delete Confirmation state
+  const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
 
   const fetchServices = async () => {
     try {
@@ -72,24 +76,34 @@ export default function ServiceManagement() {
     const service = services.find((s) => s.id === id);
     if (!service) return;
     const newStatus = service.status === "active" ? "inactive" : "active";
+        // Optimistic UI Update
+    setServices(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
+    
     try {
       await endpoints.adminUpdateService(id, { status: newStatus });
-      fetchServices();
+      // fetchServices(); (Removed to prevent loading screen during optimistic update)
     } catch (err: any) {
+      // Revert on error
+      setServices(prev => prev.map(p => p.id === id ? { ...p, status: service.status } : p));
       console.error(err);
       alert(`Failed to update status: ${err.message || err}`);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this service? This may affect estimates referencing it.")) {
-      try {
-        await endpoints.adminDeleteService(id);
-        fetchServices();
-      } catch (err: any) {
-        console.error(err);
-        alert(`Failed to delete service: ${err.message || err}`);
-      }
+    setServiceToDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!serviceToDelete) return;
+    try {
+      await endpoints.adminDeleteService(serviceToDelete);
+      fetchServices();
+      setServiceToDelete(null);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Failed to delete service: ${err.message || err}`);
+      setServiceToDelete(null);
     }
   };
 
@@ -134,6 +148,79 @@ export default function ServiceManagement() {
     }
   };
 
+  const servicesTable = React.useMemo(() => (
+    <Card className="overflow-hidden border-gray-100 shadow-sm bg-white">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-100 text-dezprox-primary font-bold text-xs uppercase tracking-wider">
+              <th className="p-4 pl-6">Service</th>
+              <th className="p-4">Category</th>
+              <th className="p-4">Base Price</th>
+              <th className="p-4">Unit Type</th>
+              <th className="p-4">Status</th>
+              <th className="p-4 pr-6 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {services.map((service) => {
+              const Icon = getIcon(service.iconName);
+              const isActive = service.status === "active";
+              return (
+                <tr key={service.id} className="hover:bg-slate-50/40 transition-colors">
+                  <td className="p-4 pl-6 flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg ${isActive ? "bg-dezprox-accent/10 text-dezprox-primary" : "bg-gray-100 text-gray-400"}`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-dezprox-primary block">{service.name}</span>
+                      <span className="text-xs text-gray-400 max-w-xs truncate block">{service.description}</span>
+                    </div>
+                  </td>
+                  <td className="p-4 font-semibold text-gray-600">{service.category}</td>
+                  <td className="p-4 font-bold text-dezprox-primary">{currency}{service.basePrice.toLocaleString()}</td>
+                  <td className="p-4 text-xs font-semibold text-gray-500">{service.unitType || "Project"}</td>
+                  <td className="p-4">
+                    <Badge variant={isActive ? "accent" : "outline"} className="capitalize font-bold text-[10px]">
+                      {service.status}
+                    </Badge>
+                  </td>
+                  <td className="p-4 pr-6 text-right whitespace-nowrap space-x-2">
+                    <button
+                      onClick={() => handleToggleStatus(service.id)}
+                      className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                        isActive 
+                          ? "border-amber-200 text-amber-600 hover:bg-amber-50" 
+                          : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                      }`}
+                      title={isActive ? "Disable Service" : "Enable Service"}
+                    >
+                      {isActive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      onClick={() => handleOpenEdit(service)}
+                      className="p-1.5 border border-gray-200 text-gray-500 rounded-lg hover:text-dezprox-primary hover:bg-gray-50 transition-all cursor-pointer"
+                      title="Edit Service"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(service.id)}
+                      className="p-1.5 border border-red-100 text-red-500 rounded-lg hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer"
+                      title="Delete Service"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  ), [services, currency]);
+
   if (loading) {
     return <AdminSkeleton />;
   }
@@ -161,81 +248,12 @@ export default function ServiceManagement() {
       </div>
 
       {/* Services Table */}
-      <Card className="overflow-hidden border-gray-100 shadow-sm bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100 text-dezprox-primary font-bold text-xs uppercase tracking-wider">
-                <th className="p-4 pl-6">Service</th>
-                <th className="p-4">Category</th>
-                <th className="p-4">Base Price</th>
-                <th className="p-4">Unit Type</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 pr-6 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {services.map((service) => {
-                const Icon = getIcon(service.iconName);
-                const isActive = service.status === "active";
-                return (
-                  <tr key={service.id} className="hover:bg-slate-50/40 transition-colors">
-                    <td className="p-4 pl-6 flex items-center space-x-3">
-                      <div className={`p-2 rounded-lg ${isActive ? "bg-dezprox-accent/10 text-dezprox-primary" : "bg-gray-100 text-gray-400"}`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="font-bold text-dezprox-primary block">{service.name}</span>
-                        <span className="text-xs text-gray-400 max-w-xs truncate block">{service.description}</span>
-                      </div>
-                    </td>
-                    <td className="p-4 font-semibold text-gray-600">{service.category}</td>
-                    <td className="p-4 font-bold text-dezprox-primary">{currency}{service.basePrice.toLocaleString()}</td>
-                    <td className="p-4 text-xs font-semibold text-gray-500">{service.unitType || "Project"}</td>
-                    <td className="p-4">
-                      <Badge variant={isActive ? "accent" : "outline"} className="capitalize font-bold text-[10px]">
-                        {service.status}
-                      </Badge>
-                    </td>
-                    <td className="p-4 pr-6 text-right whitespace-nowrap space-x-2">
-                      <button
-                        onClick={() => handleToggleStatus(service.id)}
-                        className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
-                          isActive 
-                            ? "border-amber-200 text-amber-600 hover:bg-amber-50" 
-                            : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
-                        }`}
-                        title={isActive ? "Disable Service" : "Enable Service"}
-                      >
-                        {isActive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                      <button
-                        onClick={() => handleOpenEdit(service)}
-                        className="p-1.5 border border-gray-200 text-gray-500 rounded-lg hover:text-dezprox-primary hover:bg-gray-50 transition-all cursor-pointer"
-                        title="Edit Service"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(service.id)}
-                        className="p-1.5 border border-red-100 text-red-500 rounded-lg hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer"
-                        title="Delete Service"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {servicesTable}
 
       {/* Editor Modal Overlays */}
-      {isEditorOpen && editingService && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-card max-w-lg w-full p-6 shadow-2xl relative border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+      {isEditorOpen && editingService && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 bg-slate-900/5 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-card max-w-lg w-full p-6 shadow-2xl relative border border-gray-100 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <button 
               onClick={() => setIsEditorOpen(false)}
               className="absolute right-4 top-4 p-1 text-gray-400 hover:text-dezprox-primary transition-colors cursor-pointer"
@@ -389,6 +407,7 @@ export default function ServiceManagement() {
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Description</label>
                 <Textarea
+                  required
                   placeholder="Provide a summary of the capabilities included..."
                   value={editingService.description || ""}
                   onChange={(e) => setEditingService({ ...editingService, description: e.target.value })}
@@ -418,7 +437,43 @@ export default function ServiceManagement() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {serviceToDelete && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 bg-slate-900/5 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-card max-w-md w-full p-6 shadow-2xl relative border border-gray-100 animate-in fade-in zoom-in-95 duration-200 text-center">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-dezprox-primary mb-2">Delete Service?</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Are you sure you want to delete this service? This action cannot be undone and will affect estimates currently using it.
+            </p>
+            <div className="flex justify-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setServiceToDelete(null)}
+                className="cursor-pointer px-6"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={confirmDelete}
+                size="sm"
+                className="cursor-pointer bg-red-600 hover:bg-red-700 text-white px-6"
+              >
+                Yes, Delete
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

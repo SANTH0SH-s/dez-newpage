@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AdminSkeleton } from "@/components/ui/admin-skeleton";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -372,8 +373,8 @@ export default function PackageBuilder() {
       )}
 
       {/* Package Editor Modal */}
-      {isEditorOpen && editingPackage && (
-        <div className="fixed inset-0 bg-black/35 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      {isEditorOpen && editingPackage && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 bg-slate-900/5 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-card max-w-lg w-full p-6 shadow-2xl relative border border-gray-100 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <button 
               onClick={() => setIsEditorOpen(false)}
@@ -555,7 +556,8 @@ export default function PackageBuilder() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

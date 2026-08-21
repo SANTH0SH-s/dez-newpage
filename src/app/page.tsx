@@ -66,15 +66,15 @@ export default function Home() {
 
   const [synced, setSynced] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(() => {
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  useEffect(() => {
     if (typeof window !== "undefined") {
       const hasServices = localStorage.getItem("dezprox_services");
       const hasSettings = localStorage.getItem("dezprox_settings");
-      // If we already have cached data, don't show the initial loading screen
-      if (hasServices && hasSettings) return false;
+      if (hasServices && hasSettings) setIsInitialLoad(false);
     }
-    return true;
-  });
+  }, []);
 
   useEffect(() => {
     const syncWithBackend = async () => {
@@ -225,7 +225,7 @@ export default function Home() {
         )}
 
         {!isInitialLoad && !initError && (
-          <>
+          <React.Fragment key={String(synced)}>
             {/* Stepper container (Shown when not on Hero or Success Page) */}
             {currentStep > 0 && currentStep < 4 && (
           <div className="w-full max-w-[1280px] mx-auto pt-10 pb-6 print:hidden">
@@ -374,7 +374,7 @@ export default function Home() {
             />
           </div>
         )}
-      </>
+      </React.Fragment>
     )}
   </main>
 

@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string) {
@@ -45,7 +45,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) {
-    const errData = (data || {}) as { code?: string; message?: string };
+    const responseData = (data as any) || {};
+    const errData = responseData.error || responseData;
+    
     throw new ApiError(
       response.status,
       errData.code || "SERVER_ERROR",

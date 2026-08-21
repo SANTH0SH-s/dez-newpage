@@ -53,6 +53,7 @@ export const ContactForm = ({
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof ContactData, string>>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -81,7 +82,9 @@ export const ContactForm = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (validateForm()) {
+      setIsSubmitting(true);
       onSubmit(formData, projectModifiers);
     }
   };
@@ -255,10 +258,11 @@ export const ContactForm = ({
             <Button
               type="submit"
               variant="accent"
-              className="flex items-center gap-2 cursor-pointer"
+              disabled={isSubmitting}
+              className={`flex items-center gap-2 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
             >
-              Submit Estimate Request
-              <Send className="w-4 h-4" />
+              {isSubmitting ? "Submitting..." : "Submit Estimate Request"}
+              {!isSubmitting && <Send className="w-4 h-4" />}
             </Button>
           </div>
         </form>
